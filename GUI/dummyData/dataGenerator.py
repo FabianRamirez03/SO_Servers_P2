@@ -30,7 +30,7 @@ with open('GUI/dummyData/Heavy.csv', 'w', newline='') as file:
     for i in range(100):
         cantidad_solicitudes = random.randint(1, 100)
         tiempo_ejecucion = cantidad_solicitudes * 5 + random.randint(-5, 5)
-        memoria_utilizada = math.log(tiempo_ejecucion, 4) + random.randint(-1, 1)
+        memoria_utilizada = math.log(tiempo_ejecucion, 2) + random.randint(-1, 1)
 
         # Escribimos la fila de datos en el archivo CSV
         writer.writerow([cantidad_solicitudes, tiempo_ejecucion, memoria_utilizada])
@@ -61,7 +61,7 @@ with open('GUI/dummyData/PreHeavy.csv', 'w', newline='') as file:
     for i in range(100):
         cantidad_solicitudes = random.randint(1, 100)
         tiempo_ejecucion = cantidad_solicitudes * 8 + random.randint(-8, 8)
-        memoria_utilizada = math.log(tiempo_ejecucion, 5) + random.randint(-8, 8)
+        memoria_utilizada = math.log(tiempo_ejecucion, 2) + random.randint(-8, 8)
 
         # Escribimos la fila de datos en el archivo CSV
         writer.writerow([cantidad_solicitudes, tiempo_ejecucion, memoria_utilizada])
