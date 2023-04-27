@@ -9,11 +9,12 @@
 #include <openssl/evp.h>
 #include <openssl/buffer.h>
 
-
+#define KEY_LENGTH 32
 
 // Inicializar funciones
 int is_valid_image_path(char *image_path);
 char* image_to_base64(char* image_path);
+char* generate_key(void);
 
 int main(int argc, char *argv[]) {
 
@@ -26,6 +27,9 @@ int main(int argc, char *argv[]) {
     char ip[50] = "";
 
 	char* image_base64;
+
+	char* key = generate_key();
+	printf("Generated key: %s\n", key);
 
 	    // Obtiene el valor de los argumentos pasados en la inicializacion del programa
     for (int i = 0; i < argc; i++) {
@@ -51,11 +55,13 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+	// Valida que las imagenes sea válidas y la convierte a base 64
 	if (is_valid_image_path(image_path) == 1){
 		printf("Imagen válida\n");
 		image_base64 = image_to_base64(image_path);
 		if (image_base64 == NULL) {
 			printf("Error al obtener la imagen en base64\n");
+			return 1;
 		}
 	}
 
@@ -200,4 +206,16 @@ char* image_to_base64(char* image_path) {
     fclose(out);
 
     return base64_string;
+}
+
+char* generate_key(void) {
+    char* key = (char*)malloc((KEY_LENGTH + 1) * sizeof(char));
+    memset(key, 0, (KEY_LENGTH + 1) * sizeof(char));
+    srand((unsigned int)time(NULL)); // set seed based on current time
+
+    for (int i = 0; i < KEY_LENGTH; i++) {
+        key[i] = (char)(rand() % 26 + 'A'); // generate random uppercase letter
+    }
+
+    return key;
 }
