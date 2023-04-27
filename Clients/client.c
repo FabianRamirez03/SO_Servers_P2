@@ -7,7 +7,41 @@
 
 #define PORT 8081
 
-int main() {
+int main(int argc, char *argv[]) {
+
+	// Inicializa las variables
+	int port = -1;
+	int threads = -1;
+	int cycles = -1;
+
+    char image_path[100] = "";
+    char ip[50] = "";
+
+	    // Obtiene el valor de los argumentos pasados en la inicializacion del programa
+    for (int i = 0; i < argc; i++) {
+        if (strcmp(argv[i], "-i") == 0) {
+            strcpy(image_path, argv[i + 1]);
+		}
+		if (strcmp(argv[i], "-ip") == 0) {
+            strcpy(ip, argv[i + 1]);
+        }
+        if (strcmp(argv[i], "-p") == 0) { 
+            port = atoi(argv[i + 1]);
+        }
+        if (strcmp(argv[i], "-t") == 0) { 
+            threads = atoi(argv[i + 1]);
+        }
+		if (strcmp(argv[i], "-c") == 0) { 
+            cycles = atoi(argv[i + 1]);
+        }
+    }
+    // Se asegura que los parametros fueron correctamente proporcionados y cambiados, sino falla
+    if (port == -1 || threads == -1 || cycles == -1 || (strcmp(image_path, "") == 0)  || (strcmp(ip, "") == 0) ) {
+        printf("Falta alguno de los argumentos requeridos (-p, -t, -c, -i, -ip)\n");
+        return 1;
+    }
+
+
     int sock = 0, valread;
     struct sockaddr_in serv_addr;
     char *hello = "Hello from client";
