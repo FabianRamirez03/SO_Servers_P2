@@ -5,15 +5,15 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <ctype.h>
-#include <png.h>
-#include <jpeglib.h>
+#include <openssl/bio.h>
+#include <openssl/evp.h>
+#include <openssl/buffer.h>
 
 #define PORT 8081
 
 // Inicializar funciones
-int is_grayscale_png(char *image_path);
-int is_grayscale_jpg(char *image_path);
-int is_valid_image(char *image_path);
+int is_valid_image_path(char *image_path);
+char* image_to_base64(char* image_path);
 
 int main(int argc, char *argv[]) {
 
@@ -49,11 +49,19 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-	if (is_valid_image(image_path) == 1){
+	if (is_valid_image_path(image_path) == 1){
 		printf("Imagen válida\n");
+		char* base64 = image_to_base64(image_path);
+		if (base64 == NULL) {
+			printf("Error al obtener la imagen en base64\n");
+			return 1;
+		}
+		free(base64);
+		return 0;
 	}
 
 
+	/*
     int sock = 0, valread;
     struct sockaddr_in serv_addr;
     char *hello = "Hello from client";
@@ -94,89 +102,103 @@ int main(int argc, char *argv[]) {
     close(sock);
 
     return 0;
+	*/
 }
 
-int is_grayscale_png(char* image_path) {
-    FILE* fp = fopen(image_path, "rb");
-    if (!fp) {
-        printf("No se pudo abrir la imagen: %s\n", image_path);
+// Función que verifica si un string es un path válido a una imagen
+int is_valid_image_path(char *image_path) {
+    char *ext = strrchr(image_path, '.');  // Obtener la extensión del archivo
+    if (ext == NULL) {
         return 0;
     }
+    ext++;  // Incrementar el puntero para omitir el punto
 
-    png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-    if (!png_ptr) {
-        printf("No se pudo crear la estructura png_ptr para la imagen: %s\n", image_path);
-        fclose(fp);
-        return 0;
+    // Convertir la extensión a minúsculas para compararla con los formatos válidos
+    for (char *p = ext; *p; p++) {
+        *p = tolower(*p);
     }
 
-    png_infop info_ptr = png_create_info_struct(png_ptr);
-    if (!info_ptr) {
-        printf("No se pudo crear la estructura info_ptr para la imagen: %s\n", image_path);
-        png_destroy_read_struct(&png_ptr, NULL, NULL);
-        fclose(fp);
-        return 0;
-    }
-
-    png_init_io(png_ptr, fp);
-    png_read_info(png_ptr, info_ptr);
-
-    int bit_depth = png_get_bit_depth(png_ptr, info_ptr);
-    int color_type = png_get_color_type(png_ptr, info_ptr);
-
-    fclose(fp);
-    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-
-    if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
-		printf("Imagen válida\n");
+    // Verificar si la extensión es válida y si el archivo existe
+    if (strcmp(ext, "png") == 0 || strcmp(ext, "jpg") == 0 || strcmp(ext, "jpeg") == 0) {
+		FILE* fp = fopen(image_path, "rb");
+    	if (!fp) 
+		{
+	        printf("No se pudo abrir la imagen: %s\n", image_path);
+	        return 0;
+		}
         return 1;
     }
 
-    return 0;
+    return 1;
 }
 
-int is_grayscale_jpg(char* image_path) {
+char* image_to_base64(char* image_path) {
+    // Leer la imagen y obtener su tamaño
     FILE* fp = fopen(image_path, "rb");
     if (!fp) {
         printf("No se pudo abrir la imagen: %s\n", image_path);
-        return 0;
+        return NULL;
     }
+    fseek(fp, 0, SEEK_END);
+    size_t image_size = ftell(fp);
+    rewind(fp);
 
-    struct jpeg_decompress_struct cinfo;
-    struct jpeg_error_mgr jerr;
-
-    cinfo.err = jpeg_std_error(&jerr);
-    jpeg_create_decompress(&cinfo);
-
-    jpeg_stdio_src(&cinfo, fp);
-    jpeg_read_header(&cinfo, TRUE);
-
+    // Leer la imagen en un buffer
+    unsigned char* image_buffer = malloc(sizeof(unsigned char) * image_size);
+    if (!image_buffer) {
+        printf("No se pudo reservar memoria para el buffer de la imagen\n");
+        fclose(fp);
+        return NULL;
+    }
+    size_t bytes_read = fread(image_buffer, 1, image_size, fp);
+    if (bytes_read != image_size) {
+        printf("No se pudo leer la imagen correctamente\n");
+        fclose(fp);
+        free(image_buffer);
+        return NULL;
+    }
     fclose(fp);
 
-    if (cinfo.num_components == 1) {
-		printf("Imagen válida\n");
-        jpeg_destroy_decompress(&cinfo);
-        return 1;
+    // Convertir la imagen a base64
+    BIO *bio, *b64;
+    BUF_MEM *bufferPtr;
+
+    bio = BIO_new(BIO_s_mem());
+    b64 = BIO_new(BIO_f_base64());
+    bio = BIO_push(b64, bio);
+
+    BIO_write(bio, image_buffer, image_size);
+    BIO_flush(bio);
+
+    BIO_get_mem_ptr(bio, &bufferPtr);
+    BIO_set_close(bio, BIO_NOCLOSE);
+
+    char* base64_string = malloc(sizeof(char) * (bufferPtr->length + 1));
+    if (!base64_string) {
+        printf("No se pudo reservar memoria para el string de base64\n");
+        BIO_free_all(bio);
+        free(image_buffer);
+        return NULL;
     }
+    memcpy(base64_string, bufferPtr->data, bufferPtr->length);
+    base64_string[bufferPtr->length] = '\0';
 
-    jpeg_destroy_decompress(&cinfo);
-    return 0;
-}
+    BIO_free_all(bio);
+    free(image_buffer);
 
+    // Guardar el string en un archivo de texto
+    char filename[strlen(image_path) + 5];
+    strcpy(filename, image_path);
+    strcat(filename, ".txt");
 
-int is_valid_image(char* image_path) {
-    char* extension = strrchr(image_path, '.');
-    if (extension == NULL) {
-        printf("La imagen no tiene una extensión válida: %s\n", image_path);
-        return 0;
+    FILE* out = fopen(filename, "w");
+    if (!out) {
+        printf("No se pudo abrir el archivo de salida\n");
+        free(base64_string);
+        return NULL;
     }
+    fprintf(out, "%s", base64_string);
+    fclose(out);
 
-    extension++; // avanza el puntero para obtener la extensión sin el punto
-
-    if (strcasecmp(extension, "png") == 0) {
-        return is_grayscale_png(image_path);
-    }
-    else if (strcasecmp(extension, "jpg") == 0 || strcasecmp(extension, "jpeg") == 0) {
-        return is_grayscale_jpg(image_path);
-    }
+    return base64_string;
 }
