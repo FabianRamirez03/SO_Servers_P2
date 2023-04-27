@@ -25,6 +25,8 @@ int main(int argc, char *argv[]) {
     char image_path[100] = "";
     char ip[50] = "";
 
+	char* image_base64;
+
 	    // Obtiene el valor de los argumentos pasados en la inicializacion del programa
     for (int i = 0; i < argc; i++) {
         if (strcmp(argv[i], "-i") == 0) {
@@ -51,17 +53,14 @@ int main(int argc, char *argv[]) {
 
 	if (is_valid_image_path(image_path) == 1){
 		printf("Imagen válida\n");
-		char* base64 = image_to_base64(image_path);
-		if (base64 == NULL) {
+		image_base64 = image_to_base64(image_path);
+		if (image_base64 == NULL) {
 			printf("Error al obtener la imagen en base64\n");
-			return 1;
 		}
-		free(base64);
-		return 0;
 	}
 
 
-	/*
+	
     int sock = 0, valread;
     struct sockaddr_in serv_addr;
     char *hello = "Hello from client";
@@ -102,7 +101,7 @@ int main(int argc, char *argv[]) {
     close(sock);
 
     return 0;
-	*/
+	
 }
 
 // Función que verifica si un string es un path válido a una imagen
