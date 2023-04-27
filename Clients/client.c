@@ -9,7 +9,7 @@
 #include <openssl/evp.h>
 #include <openssl/buffer.h>
 
-#define PORT 8081
+
 
 // Inicializar funciones
 int is_valid_image_path(char *image_path);
@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
     // Set server address and port
     memset(&serv_addr, '0', sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(PORT);
+    serv_addr.sin_port = htons(port);
 
     // Convert IP address from text to binary form
     if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0) {
