@@ -4,8 +4,16 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <ctype.h>
+#include <png.h>
+#include <jpeglib.h>
 
 #define PORT 8081
+
+// Inicializar funciones
+int is_grayscale_png(char *image_path);
+int is_grayscale_jpg(char *image_path);
+int is_valid_image(char *image_path);
 
 int main(int argc, char *argv[]) {
 
@@ -40,6 +48,10 @@ int main(int argc, char *argv[]) {
         printf("Falta alguno de los argumentos requeridos (-p, -t, -c, -i, -ip)\n");
         return 1;
     }
+
+	if (is_valid_image(image_path) == 1){
+		printf("Imagen válida\n");
+	}
 
 
     int sock = 0, valread;
@@ -82,4 +94,89 @@ int main(int argc, char *argv[]) {
     close(sock);
 
     return 0;
+}
+
+int is_grayscale_png(char* image_path) {
+    FILE* fp = fopen(image_path, "rb");
+    if (!fp) {
+        printf("No se pudo abrir la imagen: %s\n", image_path);
+        return 0;
+    }
+
+    png_structp png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    if (!png_ptr) {
+        printf("No se pudo crear la estructura png_ptr para la imagen: %s\n", image_path);
+        fclose(fp);
+        return 0;
+    }
+
+    png_infop info_ptr = png_create_info_struct(png_ptr);
+    if (!info_ptr) {
+        printf("No se pudo crear la estructura info_ptr para la imagen: %s\n", image_path);
+        png_destroy_read_struct(&png_ptr, NULL, NULL);
+        fclose(fp);
+        return 0;
+    }
+
+    png_init_io(png_ptr, fp);
+    png_read_info(png_ptr, info_ptr);
+
+    int bit_depth = png_get_bit_depth(png_ptr, info_ptr);
+    int color_type = png_get_color_type(png_ptr, info_ptr);
+
+    fclose(fp);
+    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+
+    if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
+		printf("Imagen válida\n");
+        return 1;
+    }
+
+    return 0;
+}
+
+int is_grayscale_jpg(char* image_path) {
+    FILE* fp = fopen(image_path, "rb");
+    if (!fp) {
+        printf("No se pudo abrir la imagen: %s\n", image_path);
+        return 0;
+    }
+
+    struct jpeg_decompress_struct cinfo;
+    struct jpeg_error_mgr jerr;
+
+    cinfo.err = jpeg_std_error(&jerr);
+    jpeg_create_decompress(&cinfo);
+
+    jpeg_stdio_src(&cinfo, fp);
+    jpeg_read_header(&cinfo, TRUE);
+
+    fclose(fp);
+
+    if (cinfo.num_components == 1) {
+		printf("Imagen válida\n");
+        jpeg_destroy_decompress(&cinfo);
+        return 1;
+    }
+
+    jpeg_destroy_decompress(&cinfo);
+    return 0;
+}
+
+
+int is_valid_image(char* image_path) {
+    char* extension = strrchr(image_path, '.');
+    if (extension == NULL) {
+        printf("La imagen no tiene una extensión válida: %s\n", image_path);
+        return 0;
+    }
+
+    extension++; // avanza el puntero para obtener la extensión sin el punto
+
+    if (strcasecmp(extension, "png") == 0) {
+        return is_grayscale_png(image_path);
+    }
+    else if (strcasecmp(extension, "jpg") == 0 || strcasecmp(extension, "jpeg") == 0) {
+        return is_grayscale_jpg(image_path);
+    }
 }
