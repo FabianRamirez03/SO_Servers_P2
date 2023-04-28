@@ -11,6 +11,7 @@
 #include <jansson.h>
 
 #define KEY_LENGTH 32
+#define buffer_size 1000000
 
 // Inicializar funciones
 int is_valid_image_path(char *image_path);
@@ -78,7 +79,7 @@ int main(int argc, char *argv[]) {
 	// rellenar información necesaria para ser enviada en el json
 
 	json_object_set_new(data_to_send, "nombre", json_string(image_name));  // Agregar una cadena con clave "nombre"
-    //json_object_set_new(data_to_send, "data", json_string(image_base64));  // Agregar un entero con clave "edad"
+    json_object_set_new(data_to_send, "data", json_string(image_base64));  // Agregar un entero con clave "edad"
     json_object_set_new(data_to_send, "key", json_string(key));  // Agregar un booleano con clave "casado"
 	json_object_set_new(data_to_send, "total", json_integer(threads*cycles));   // Agregar un booleano con clave "casado"
     
@@ -91,7 +92,7 @@ int main(int argc, char *argv[]) {
     int sock = 0, valread;
     struct sockaddr_in serv_addr;
     char *hello = "Hello from client";
-    char buffer[1024] = {0};
+    char buffer[buffer_size] = {0};
 
     // Create socket file descriptor
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -121,7 +122,7 @@ int main(int argc, char *argv[]) {
     printf("Hello message sent\n");
 
     // Read message from server
-    valread = read(sock, buffer, 1024);
+    valread = read(sock, buffer, buffer_size);
     printf("%s\n", buffer);
 
     // Close socket

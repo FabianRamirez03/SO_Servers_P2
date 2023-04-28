@@ -7,15 +7,16 @@
 #include <jansson.h>
 
 #define PORT 8081
+#define buffer_size 1000000
 
-int process_new_request(const char* message_received);
+int process_new_request(const char* message_received, size_t message_length);
 
 int main(int argc, char **argv) {
     int server_fd, new_socket, valread;
     struct sockaddr_in address;
     int opt = 1;
     int addrlen = sizeof(address);
-    char buffer[1024] = {0};
+    char buffer[buffer_size] = {0};
     char *hello = "Hello from server";
 
     // Create socket file descriptor
@@ -58,7 +59,7 @@ int main(int argc, char **argv) {
 
         while (1) {
             // Read message from client
-            valread = read(new_socket, buffer, 1024);
+            valread = read(new_socket, buffer, buffer_size);
             printf("Received %d bytes from client.\n", valread);
 
             // Check if client closed connection
@@ -70,7 +71,7 @@ int main(int argc, char **argv) {
             // Process received data
             printf("Processing data: %s\n", buffer);
 
-			process_new_request(buffer);
+			process_new_request(buffer, sizeof(buffer));
 
             // Send message to client
             send(new_socket, hello, strlen(hello), 0);
@@ -90,11 +91,11 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-int process_new_request(const char* message_received){
+int process_new_request(const char* message_received, size_t message_length){
 
 	json_error_t error;  // Estructura para almacenar errores
     
-    json_t *json_obj = json_loads(message_received, 0, &error);  // Deserializar la cadena JSON en un objeto JSON
+    json_t *json_obj = json_loadb(message_received, message_length, 0, &error);  // Deserializar la cadena JSON en un objeto JSON
     
     if (json_obj == NULL) {
         fprintf(stderr, "Error: %s\n", error.text);  // Imprimir el error en caso de que ocurra
