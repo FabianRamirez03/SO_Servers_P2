@@ -8,6 +8,7 @@
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <openssl/buffer.h>
+#include <jansson.h>
 
 #define KEY_LENGTH 32
 
@@ -15,6 +16,7 @@
 int is_valid_image_path(char *image_path);
 char* image_to_base64(char* image_path);
 char* generate_key(void);
+char* get_filename(char* path);
 
 int main(int argc, char *argv[]) {
 
@@ -24,12 +26,15 @@ int main(int argc, char *argv[]) {
 	int cycles = -1;
 
     char image_path[100] = "";
+	char* image_name = "";
     char ip[50] = "";
 
 	char* image_base64;
 
 	char* key = generate_key();
 	printf("Generated key: %s\n", key);
+
+	json_t *data_to_send = json_object();  // Crear un objeto JSON vacío que almacenará la información 
 
 	    // Obtiene el valor de los argumentos pasados en la inicializacion del programa
     for (int i = 0; i < argc; i++) {
@@ -65,6 +70,22 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	// Obtiene el nombre de la imagen
+
+	image_name = get_filename(image_path);
+
+
+	// rellenar información necesaria para ser enviada en el json
+
+	json_object_set_new(data_to_send, "nombre", json_string(image_name));  // Agregar una cadena con clave "nombre"
+    //json_object_set_new(data_to_send, "data", json_string(image_base64));  // Agregar un entero con clave "edad"
+    json_object_set_new(data_to_send, "key", json_string(key));  // Agregar un booleano con clave "casado"
+	json_object_set_new(data_to_send, "total", json_integer(threads*cycles));   // Agregar un booleano con clave "casado"
+    
+    char *json_str = json_dumps(data_to_send, JSON_ENCODE_ANY);  // Convertir el objeto JSON en una cadena JSON
+    
+    //printf("%s\n", json_str);  // Imprimir la cadena JSON
+
 
 	
     int sock = 0, valread;
@@ -96,7 +117,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Send message to server
-    send(sock, hello, strlen(hello), 0);
+    send(sock, json_str, strlen(json_str), 0);
     printf("Hello message sent\n");
 
     // Read message from server
@@ -219,3 +240,20 @@ char* generate_key(void) {
 
     return key;
 }
+
+char* get_filename(char* path) {
+    // Find last occurrence of "/" or "\" in the path
+    char* separator = strrchr(path, '/');
+    if (separator == NULL) {
+        separator = strrchr(path, '\\');
+    }
+
+    // If separator found, return pointer to next character
+    if (separator != NULL) {
+        return separator + 1;
+    }
+
+    // If no separator found, return path
+    return path;
+}
+

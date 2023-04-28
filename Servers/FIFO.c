@@ -4,8 +4,11 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <jansson.h>
 
 #define PORT 8081
+
+int process_new_request(const char* message_received);
 
 int main(int argc, char **argv) {
     int server_fd, new_socket, valread;
@@ -67,6 +70,8 @@ int main(int argc, char **argv) {
             // Process received data
             printf("Processing data: %s\n", buffer);
 
+			process_new_request(buffer);
+
             // Send message to client
             send(new_socket, hello, strlen(hello), 0);
             printf("Hello message sent\n");
@@ -82,5 +87,29 @@ int main(int argc, char **argv) {
     // Close server socket
     close(server_fd);
 
+    return 0;
+}
+
+int process_new_request(const char* message_received){
+
+	json_error_t error;  // Estructura para almacenar errores
+    
+    json_t *json_obj = json_loads(message_received, 0, &error);  // Deserializar la cadena JSON en un objeto JSON
+    
+    if (json_obj == NULL) {
+        fprintf(stderr, "Error: %s\n", error.text);  // Imprimir el error en caso de que ocurra
+        return 1;
+    }
+    
+    const char *nombre = json_string_value(json_object_get(json_obj, "nombre"));  // Obtener la cadena con clave "nombre"
+	const char *key = json_string_value(json_object_get(json_obj, "key"));  // Obtener la cadena con clave "nombre"
+    int total = json_integer_value(json_object_get(json_obj, "total"));  // Obtener el entero con clave "edad"
+    
+    printf("Nombre: %s\n", nombre);  // Imprimir la cadena con clave "nombre"
+	printf("Key: %s\n", key);  // Imprimir la cadena con clave "nombre"
+    printf("total: %d\n", total);  // Imprimir el entero con clave "edad"
+    
+    json_decref(json_obj);  // Liberar la memoria utilizada por el objeto JSON
+    
     return 0;
 }
