@@ -1,6 +1,6 @@
-all: client fifo
+all: Client fifo
 
-client:
+Client:
 	gcc -c Clients/client.c
 	gcc client.o -o out/client -lssl -lcrypto -lm -ljansson
 	rm client.o

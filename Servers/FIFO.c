@@ -9,7 +9,7 @@
 #define PORT 8081
 #define buffer_size 1000000
 
-int process_new_request(const char* message_received, size_t message_length);
+int process_new_request(const char* message_received);
 
 int main(int argc, char **argv) {
     int server_fd, new_socket, valread;
@@ -18,7 +18,9 @@ int main(int argc, char **argv) {
     int addrlen = sizeof(address);
     char buffer[buffer_size] = {0};
     char message_rec[buffer_size] = {0};
+    message_rec[sizeof(message_rec)-1] = '\0';
     char *hello = "Hello from server";
+    int total_bytes_processed = 0;
 
     // Create socket file descriptor
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
@@ -62,7 +64,7 @@ int main(int argc, char **argv) {
             // Read message from client
             valread = read(new_socket, buffer, buffer_size);
             printf("Received %d bytes from client.\n", valread);
-
+            total_bytes_processed = total_bytes_processed + valread;
             // Check if client closed connection
             if (valread == 0) {
                 printf("Client disconnected.\n");
@@ -70,12 +72,20 @@ int main(int argc, char **argv) {
             }
 
             // Process received data
-            printf("Processing data: %s\n", buffer);
+            //printf("Processing data: %s\n", buffer);
             strcat(message_rec, buffer);
 
             if (buffer[valread-1] == '\n' && buffer[valread-2] == '=' && buffer[valread-3] == '=' && buffer[valread-4] == 'g' && buffer[valread-5] == 'g' && buffer[valread-6] == 'J'){
                 printf("End of message received.\n");
-                process_new_request(buffer, sizeof(buffer));
+                process_new_request(buffer);
+            }
+
+            if (buffer[valread-1] == '}') {
+                //char msg_final[total_bytes_processed] = "";
+                strcat(message_rec, buffer);
+                printf("Mario es la chimba: %s\n FIN DE LA LINEA\n", message_rec);
+                process_new_request(message_rec);
+                
             }
             
 
@@ -98,26 +108,26 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-int process_new_request(const char* message_received, size_t message_length){
+int process_new_request(const char* message_received){
 
-	json_error_t error;  // Estructura para almacenar errores
-    
-    json_t *json_obj = json_loadb(message_received, message_length, 0, &error);  // Deserializar la cadena JSON en un objeto JSON
-    
+    json_error_t error;  // Estructura para almacenar errores
+
+    json_t *json_obj = json_loads(message_received, 0, &error);  // Deserializar la cadena JSON en un objeto JSON
+
     if (json_obj == NULL) {
         fprintf(stderr, "Error: %s\n", error.text);  // Imprimir el error en caso de que ocurra
         return 1;
     }
-    
+
     const char *nombre = json_string_value(json_object_get(json_obj, "nombre"));  // Obtener la cadena con clave "nombre"
-	const char *key = json_string_value(json_object_get(json_obj, "key"));  // Obtener la cadena con clave "nombre"
+    const char *key = json_string_value(json_object_get(json_obj, "key"));  // Obtener la cadena con clave "nombre"
     int total = json_integer_value(json_object_get(json_obj, "total"));  // Obtener el entero con clave "edad"
-    
+
     printf("Nombre: %s\n", nombre);  // Imprimir la cadena con clave "nombre"
-	printf("Key: %s\n", key);  // Imprimir la cadena con clave "nombre"
+    printf("Key: %s\n", key);  // Imprimir la cadena con clave "nombre"
     printf("total: %d\n", total);  // Imprimir el entero con clave "edad"
-    
+
     json_decref(json_obj);  // Liberar la memoria utilizada por el objeto JSON
-    
+
     return 0;
 }
