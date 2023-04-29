@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
     
     char *json_str = json_dumps(data_to_send, JSON_ENCODE_ANY);  // Convertir el objeto JSON en una cadena JSON
     
-    //printf("%s\n", json_str);  // Imprimir la cadena JSON
+    printf("Bytes a enviar: %zu\n", strlen(json_str));  // Imprimir la cadena JSON
 
 
 	

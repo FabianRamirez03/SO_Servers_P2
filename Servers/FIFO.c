@@ -9,7 +9,7 @@
 #define PORT 8081
 #define buffer_size 1000000
 
-int process_new_request(const char* message_received, size_t message_length);
+int process_new_request(const char* message_received);
 
 int main(int argc, char **argv) {
     int server_fd, new_socket, valread;
@@ -69,9 +69,9 @@ int main(int argc, char **argv) {
             }
 
             // Process received data
-            printf("Processing data: %s\n", buffer);
+            //printf("Processing data: %s\n", buffer);
 
-			process_new_request(buffer, sizeof(buffer));
+			process_new_request(buffer);
 
             // Send message to client
             send(new_socket, hello, strlen(hello), 0);
@@ -91,11 +91,11 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-int process_new_request(const char* message_received, size_t message_length){
+int process_new_request(const char* message_received){
 
 	json_error_t error;  // Estructura para almacenar errores
     
-    json_t *json_obj = json_loadb(message_received, message_length, 0, &error);  // Deserializar la cadena JSON en un objeto JSON
+    json_t *json_obj = json_loads(message_received, 0, &error);  // Deserializar la cadena JSON en un objeto JSON
     
     if (json_obj == NULL) {
         fprintf(stderr, "Error: %s\n", error.text);  // Imprimir el error en caso de que ocurra
