@@ -81,21 +81,21 @@ int main(int argc, char **argv) {
             }
 
             if (buffer[valread-1] == '}') {
-                //char msg_final[total_bytes_processed] = "";
-                strcat(message_rec, buffer);
-                printf("Mario es la chimba: %s\n FIN DE LA LINEA\n", message_rec);
                 process_new_request(message_rec);
+
+				char message_rec[buffer_size] = {0};
+				message_rec[sizeof(message_rec)-1] = '\0';
+
+				// Send message to client
+				send(new_socket, hello, strlen(hello), 0);
+				printf("Hello message sent\n");
+
+				// Clear buffer
+				memset(buffer, 0, sizeof(buffer));
                 
             }
             
-
-
-            // Send message to client
-            send(new_socket, hello, strlen(hello), 0);
-            printf("Hello message sent\n");
-
-            // Clear buffer
-            memset(buffer, 0, sizeof(buffer));
+            
         }
 
         // Close current socket
@@ -109,6 +109,7 @@ int main(int argc, char **argv) {
 }
 
 int process_new_request(const char* message_received){
+	printf("Incia el procesamiento\n");
 
     json_error_t error;  // Estructura para almacenar errores
 
@@ -122,10 +123,22 @@ int process_new_request(const char* message_received){
     const char *nombre = json_string_value(json_object_get(json_obj, "nombre"));  // Obtener la cadena con clave "nombre"
     const char *key = json_string_value(json_object_get(json_obj, "key"));  // Obtener la cadena con clave "nombre"
     int total = json_integer_value(json_object_get(json_obj, "total"));  // Obtener el entero con clave "edad"
+	const char *base64_string = json_string_value(json_object_get(json_obj, "data"));
 
     printf("Nombre: %s\n", nombre);  // Imprimir la cadena con clave "nombre"
     printf("Key: %s\n", key);  // Imprimir la cadena con clave "nombre"
     printf("total: %d\n", total);  // Imprimir el entero con clave "edad"
+
+	// Guardar el string en un archivo de texto
+
+    FILE* out = fopen("procesado.txt", "w");
+    if (!out) {
+        printf("No se pudo abrir el archivo de salida\n");
+        return 1;
+    }
+    fprintf(out, "%s", base64_string);
+    fclose(out);
+
 
     json_decref(json_obj);  // Liberar la memoria utilizada por el objeto JSON
 

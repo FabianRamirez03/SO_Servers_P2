@@ -9,4 +9,3 @@ fifo:
 	gcc -c Servers/FIFO.c
 	gcc FIFO.o -o out/FIFO -ljansson
 	rm FIFO.o
-
