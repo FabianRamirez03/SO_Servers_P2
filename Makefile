@@ -9,3 +9,8 @@ fifo:
 	gcc -c Servers/FIFO.c
 	gcc FIFO.o -o out/FIFO -ljansson
 	rm FIFO.o
+
+sobel:
+	g++ -o out/sobel util/sobel.c `pkg-config --cflags --libs opencv4` -std=c++11
+
+all: CLIENT fifo
