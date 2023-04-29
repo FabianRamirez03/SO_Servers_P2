@@ -1,4 +1,4 @@
-all: Client fifo
+all: Client fifo sobel
 
 Client:
 	gcc -c Clients/client.c
@@ -12,5 +12,3 @@ fifo:
 
 sobel:
 	g++ -o out/sobel util/sobel.c `pkg-config --cflags --libs opencv4` -std=c++11
-
-all: CLIENT fifo
