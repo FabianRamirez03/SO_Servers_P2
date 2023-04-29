@@ -86,12 +86,17 @@ int main(int argc, char **argv) {
 				char message_rec[buffer_size] = {0};
 				message_rec[sizeof(message_rec)-1] = '\0';
 
-				// Send message to client
-				send(new_socket, hello, strlen(hello), 0);
-				printf("Hello message sent\n");
+				
 
 				// Clear buffer
 				memset(buffer, 0, sizeof(buffer));
+                memset(message_rec, 0, sizeof(message_rec));
+                valread = 0;
+
+                // Send message to client
+				send(new_socket, hello, strlen(hello), 0);
+				printf("Hello message sent\n");
+
                 
             }
             
