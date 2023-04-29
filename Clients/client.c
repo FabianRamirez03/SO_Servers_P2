@@ -31,6 +31,7 @@ int main(int argc, char *argv[]) {
     char ip[50] = "";
 
 	char* image_base64;
+    
 
 	char* key = generate_key();
 	printf("Generated key: %s\n", key);
@@ -85,7 +86,7 @@ int main(int argc, char *argv[]) {
     
     char *json_str = json_dumps(data_to_send, JSON_ENCODE_ANY);  // Convertir el objeto JSON en una cadena JSON
     
-    //printf("%s\n", json_str);  // Imprimir la cadena JSON
+    //printf("json: %s\n", json_str);  // Imprimir la cadena JSON
 
 
 	
