@@ -17,6 +17,7 @@ int main(int argc, char **argv) {
     int opt = 1;
     int addrlen = sizeof(address);
     char buffer[buffer_size] = {0};
+    char message_rec[buffer_size] = {0};
     char *hello = "Hello from server";
 
     // Create socket file descriptor
@@ -70,8 +71,14 @@ int main(int argc, char **argv) {
 
             // Process received data
             printf("Processing data: %s\n", buffer);
+            strcat(message_rec, buffer);
 
-			process_new_request(buffer, sizeof(buffer));
+            if (buffer[valread-1] == '\n' && buffer[valread-2] == '=' && buffer[valread-3] == '=' && buffer[valread-4] == 'g' && buffer[valread-5] == 'g' && buffer[valread-6] == 'J'){
+                printf("End of message received.\n");
+                process_new_request(buffer, sizeof(buffer));
+            }
+            
+
 
             // Send message to client
             send(new_socket, hello, strlen(hello), 0);
