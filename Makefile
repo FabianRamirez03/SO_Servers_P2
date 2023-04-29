@@ -1,3 +1,5 @@
+all: client fifo
+
 client:
 	gcc -c Clients/client.c
 	gcc client.o -o out/client -lssl -lcrypto -lm -ljansson
@@ -8,4 +10,3 @@ fifo:
 	gcc FIFO.o -o out/FIFO -ljansson
 	rm FIFO.o
 
-all: client fifo
