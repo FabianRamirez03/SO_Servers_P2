@@ -76,17 +76,23 @@ int main(int argc, char *argv[]) {
 
 	image_name = get_filename(image_path);
 
+    
+    
+
 
 	// rellenar información necesaria para ser enviada en el json
 
 	json_object_set_new(data_to_send, "nombre", json_string(image_name));  // Agregar una cadena con clave "nombre"
-    json_object_set_new(data_to_send, "data", json_string(image_base64));  // Agregar un entero con clave "edad"
-    json_object_set_new(data_to_send, "key", json_string(key));  // Agregar un booleano con clave "casado"
-	json_object_set_new(data_to_send, "total", json_integer(threads*cycles));   // Agregar un booleano con clave "casado"
+    json_object_set_new(data_to_send, "data", json_string(image_base64));  // Agregar un string base 64 con clave "data"
+    json_object_set_new(data_to_send, "key", json_string(key));  // Agregar un string con clave "key"
+	json_object_set_new(data_to_send, "total", json_integer(threads*cycles));   // Agregar un entero con clave "total"
     
     char *json_str = json_dumps(data_to_send, JSON_ENCODE_ANY);  // Convertir el objeto JSON en una cadena JSON
     
-    //printf("json: %s\n", json_str);  // Imprimir la cadena JSON
+    //Add three '*' at the end of json_str
+    strcat(json_str, "***");
+    
+    printf("json: %s\n", json_str);  // Imprimir la cadena JSON
 
 
 	

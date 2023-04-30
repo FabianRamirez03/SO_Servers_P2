@@ -75,29 +75,28 @@ int main(int argc, char **argv) {
             //printf("Processing data: %s\n", buffer);
             strcat(message_rec, buffer);
 
-            if (buffer[valread-1] == '\n' && buffer[valread-2] == '=' && buffer[valread-3] == '=' && buffer[valread-4] == 'g' && buffer[valread-5] == 'g' && buffer[valread-6] == 'J'){
+            if (buffer[valread-1] == '*' && buffer[valread-2] == '*' && buffer[valread-3] == '*'){
                 printf("End of message received.\n");
-                process_new_request(buffer);
-            }
+                //Remove last 3 characters
+                message_rec[strlen(message_rec)-3] = '\0';
 
-            if (buffer[valread-1] == '}') {
+                buffer[strlen(buffer)-3] = '\0';
+                //printf("Message received: %s\n", message_rec);
                 process_new_request(message_rec);
-
-				char message_rec[buffer_size] = {0};
-				message_rec[sizeof(message_rec)-1] = '\0';
-
 				
 
-				// Clear buffer
-				memset(buffer, 0, sizeof(buffer));
-                memset(message_rec, 0, sizeof(message_rec));
+				// Clear buffer and message received
+                memset(buffer, 0, buffer_size);
+                memset(message_rec, 0, buffer_size);
+                total_bytes_processed = 0;
                 valread = 0;
+
+
 
                 // Send message to client
 				send(new_socket, hello, strlen(hello), 0);
 				printf("Hello message sent\n");
 
-                
             }
             
             
@@ -117,6 +116,8 @@ int process_new_request(const char* message_received){
 	printf("Incia el procesamiento\n");
 
     json_error_t error;  // Estructura para almacenar errores
+
+    printf("Mensaje recibido: %s\n", message_received);
 
     json_t *json_obj = json_loads(message_received, 0, &error);  // Deserializar la cadena JSON en un objeto JSON
 
@@ -146,6 +147,7 @@ int process_new_request(const char* message_received){
 
 
     json_decref(json_obj);  // Liberar la memoria utilizada por el objeto JSON
+
 
     return 0;
 }

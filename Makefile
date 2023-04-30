@@ -1,4 +1,4 @@
-all: Client fifo sobel
+all: Client fifo
 
 Client:
 	gcc -c Clients/client.c
