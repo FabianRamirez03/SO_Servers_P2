@@ -3,6 +3,6 @@
 
 #include <stdlib.h>
 
-extern void sobel_filter(const char *b64_image);
+extern void sobel_filter(const char *nombre, const char *path);
 
 #endif /* SOBEL_H */

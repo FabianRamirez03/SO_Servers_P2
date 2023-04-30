@@ -4,26 +4,14 @@
 #include <string.h>
 #include "sobel.h"
 
-void sobel_filter(const char *base64_image)
+void sobel_filter(const char *nombre, const char *path)
 {
-    // Convertir la imagen en base64 a cv::Mat
-    std::string image_data = base64_image;
-    std::vector<char> buffer(image_data.begin(), image_data.end());
-    cv::Mat img = cv::imdecode(buffer, cv::IMREAD_GRAYSCALE);
-    if (img.empty())
+    cv::Mat imagen = cv::imread(path, cv::IMREAD_GRAYSCALE);
+    if (imagen.empty())
     {
-        printf("Error al cargar la imagen\n");
-        return;
+        std::cout << "Error al cargar la imagen" << std::endl;
     }
-
-    // Aplicar el filtro de Sobel a la imagen
     cv::Mat sobel;
-    cv::Sobel(img, sobel, CV_8U, 1, 1);
-
-    // Guardar la imagen resultante en disco
-    std::vector<int> compression_params;
-    compression_params.push_back(cv::IMWRITE_JPEG_QUALITY);
-    compression_params.push_back(100);
-    std::string filename = "images/sobel/fifo/abigail_sobel.jpg";
-    cv::imwrite(filename, sobel, compression_params);
+    cv::Sobel(imagen, sobel, CV_8U, 1, 1);
+    cv::imwrite("Servers/FIFO_db/sobel.png", sobel);
 }
