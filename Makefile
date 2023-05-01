@@ -7,7 +7,7 @@ Client:
 
 fifo:
 	gcc -c Servers/FIFO.c
-	gcc FIFO.o -o out/FIFO -ljansson  -pthread
+	gcc FIFO.o -o out/FIFO -ljansson  -pthread 
 	rm FIFO.o
 
 sobel:

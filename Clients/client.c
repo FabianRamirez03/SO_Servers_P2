@@ -70,6 +70,7 @@ int new_connection(char * json_str, int port){
     
     // Close socket
     close(sock);
+    sleep(0.1);
 }
 
 void *send_pkg(void *arg){

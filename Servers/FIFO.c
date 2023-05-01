@@ -11,14 +11,14 @@
 #define PORT 8081
 #define buffer_size 1000000
 
-#define MAX_QUEUE_SIZE 10
+#define MAX_QUEUE_SIZE 100
 
-char queue[MAX_QUEUE_SIZE][buffer_size];
+char queue[MAX_QUEUE_SIZE][100000];
 int front = -1;
 int rear = -1;
 sem_t sem_mutex; // semaphore variable
 
-int process_new_request(const char *message_received);
+int process_new_request(char *message_received);
 void enqueue(char *value);
 char *dequeue();
 void display();
@@ -32,7 +32,7 @@ int main(int argc, char **argv)
 
     int server_fd, new_socket, valread;
     struct sockaddr_in address;
-    int opt = 1;
+    int opt = 1;    
     int addrlen = sizeof(address);
     char buffer[buffer_size] = {0};
     char message_rec[buffer_size] = {0};
@@ -85,8 +85,8 @@ int main(int argc, char **argv)
         printf("New connection established.\n");
         // Read message from client
         while (valread = recv(new_socket, buffer, buffer_size, 0) > 0){
-            printf("Received %d bytes from client.\n", valread);
             total_bytes_processed = total_bytes_processed + valread;
+            printf("Received %d bytes from client.\n", total_bytes_processed);
             // Check if client closed connection
             if (valread == 0)
             {
@@ -100,7 +100,7 @@ int main(int argc, char **argv)
             send(new_socket, "Ok", strlen("Ok"), 0);
         };
 
-        printf("Message received: %s\n", message_rec);
+        //printf("Message received: %s\n", message_rec);
         int longitud = strlen(message_rec);
         printf("Longitud: %d\n", longitud);
         
@@ -119,6 +119,10 @@ int main(int argc, char **argv)
             memset(message_rec, 0, buffer_size);
             total_bytes_processed = 0;
             valread = 0;
+
+
+
+
 
             // Send message to client
             send(new_socket, hello, strlen(hello), 0);
@@ -141,13 +145,12 @@ void *processing()
             //printf("Processing message: %s\n", message);
             printf("Processing msg...");
             process_new_request(message);
-            display();
         }
     }
     return 0;
 }
 
-int process_new_request(const char *message_received)
+int process_new_request(char *message_received)
 {
     printf("Incia el procesamiento\n");
 
@@ -169,8 +172,8 @@ int process_new_request(const char *message_received)
     const char *base64_string = json_string_value(json_object_get(json_obj, "data"));
 
     printf("Nombre: %s\n", nombre); // Imprimir la cadena con clave "nombre"
-    printf("Key: %s\n", key);       // Imprimir la cadena con clave "nombre"
-    printf("total: %d\n", total);   // Imprimir el entero con clave "edad"
+    printf("Key: %s\n", key);       // Imprimir la cadena con clave "key"
+    printf("total: %d\n", total);   // Imprimir el entero con clave "total"
 
     // Guardar el string en un archivo de texto
 
@@ -184,6 +187,8 @@ int process_new_request(const char *message_received)
     fclose(out);
 
     json_decref(json_obj); // Liberar la memoria utilizada por el objeto JSON
+
+    
 
     return 0;
 }
@@ -227,6 +232,7 @@ char *dequeue()
         {
             front = (front + 1) % MAX_QUEUE_SIZE;
         }
+        
         sem_post(&sem_mutex);
         return value;
     }
@@ -244,5 +250,26 @@ void display()
         printf("Queue size: %d\n", rear + 1);
         printf("Front index: %d\n", front);
         printf("Rear index: %d\n", rear);
+    }
+}
+
+int queue_size()
+// returns the size in bytes of the queue
+{
+    if (front == -1)
+    {
+        printf("Queue is empty\n");
+        return 0;
+    }
+    else
+    {
+        int size = 0;
+        int i;
+        for (i = front; i != rear; i = (i + 1) % MAX_QUEUE_SIZE)
+        {
+            size += strlen(queue[i]);
+        }
+        size += strlen(queue[rear]);
+        return size;
     }
 }
