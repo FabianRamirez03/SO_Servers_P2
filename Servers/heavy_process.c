@@ -157,12 +157,24 @@ void *processing(void *arg)
         char *message = dequeue();
         if (message != NULL)
         {
-            // printf("Processing message: %s\n", message);
             printf("Processing msg...");
-            process_new_request(message);
+            
+            //Creating new child processes.
+            int i, n = 3;
+            pid_t pid;
+
+            pid = fork(); // creación del proceso hijo
+
+            if (pid == -1) { // error en la creación del proceso hijo
+                color("Rojo");
+                printf("Error en la creación del proceso hijo\n");
+                color("Blanco");
+            } else {
+                process_new_request(message);
+            }
+            
         }
     }
-    return 0;
 }
 
 int process_new_request(char *message_received)

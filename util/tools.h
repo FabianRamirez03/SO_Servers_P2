@@ -12,7 +12,7 @@
 #define Blanco "\033[0;37m"
 #define Reset "\033[0m"
 
-void color(char *s_color){
+void color(const char *s_color){
     if (strcmp(s_color, "Negro") == 0){
         printf( Negro);
     }
