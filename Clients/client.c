@@ -14,7 +14,8 @@
 
 
 #define KEY_LENGTH 32
-#define buffer_size 1000000
+#define buffer_size 1024
+#define MAX_BYTES 1024
 // Inicializar funciones
 int is_valid_image_path(char *image_path);
 char* image_to_base64(char* image_path);
@@ -46,6 +47,8 @@ int new_connection(char * json_str, int port){
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(port);
 
+    int json_len = strlen(json_str);
+
     // Convert IP address from text to binary form
     if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0) {
         printf("\nInvalid address/ Address not supported \n");
@@ -58,8 +61,26 @@ int new_connection(char * json_str, int port){
         return -1;
     }
 
-    //Send the PCK
-    send(sock, json_str, strlen(json_str), 0);
+    int longitud = htonl(json_len);
+    printf("longitud: %d\n", ntohl(longitud));
+
+    send(sock, &longitud, sizeof(longitud), 0);
+
+    int bytes_enviados = 0;
+
+    while (bytes_enviados < json_len) {
+        int bytes_a_enviar = json_len - bytes_enviados;
+        if (bytes_a_enviar > MAX_BYTES) {
+            bytes_a_enviar = MAX_BYTES;
+        }
+        int resultado = send(sock, json_str + bytes_enviados, bytes_a_enviar, 0);
+        if (resultado == -1) {
+            // Error al enviar los datos
+            break;
+        }
+        bytes_enviados += resultado;
+    }
+
     printf("Hello message sent\n");
 
 

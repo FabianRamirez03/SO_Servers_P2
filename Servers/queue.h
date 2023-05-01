@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <semaphore.h>
+sem_t sem_mutex; // semaphore variable
 
 
 
@@ -18,6 +20,7 @@ typedef struct Queue {
 
 // Función para agregar un nodo a la queue
 void enqueue(Queue *q, char* value) {
+    sem_wait(&sem_mutex);
     Node *new_node = (Node *) malloc(sizeof(Node));
     new_node->value = value;
 
@@ -30,10 +33,12 @@ void enqueue(Queue *q, char* value) {
     new_node->next = q->head;
     q->tail = new_node;
     q->size++;
+    sem_post(&sem_mutex);
 }
 
 // Función para obtener el siguiente nodo de la queue
 char*  dequeue(Queue *q) {
+    sem_wait(&sem_mutex);
     if (q->size == 0) {
         return NULL;
     }
@@ -51,7 +56,7 @@ char*  dequeue(Queue *q) {
 
     free(node_to_remove);
     q->size--;
-
+    sem_post(&sem_mutex);
     return value;
 }
 

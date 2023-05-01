@@ -7,9 +7,11 @@
 #include <jansson.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include "../util/tools.h"
 
 #define PORT 8081
-#define buffer_size 1000000
+#define buffer_size 900000
+#define MAX_BYTES 1024
 
 #define MAX_QUEUE_SIZE 100
 
@@ -32,7 +34,7 @@ int main(int argc, char **argv)
 
     int server_fd, new_socket, valread;
     struct sockaddr_in address;
-    int opt = 1;    
+    int opt = 1;
     int addrlen = sizeof(address);
     char buffer[buffer_size] = {0};
     char message_rec[buffer_size] = {0};
@@ -83,52 +85,60 @@ int main(int argc, char **argv)
         }
 
         printf("New connection established.\n");
-        // Read message from client
-        while (valread = recv(new_socket, buffer, buffer_size, 0) > 0){
-            total_bytes_processed = total_bytes_processed + valread;
-            printf("Received %d bytes from client.\n", total_bytes_processed);
-            // Check if client closed connection
-            if (valread == 0)
-            {
-                printf("Client disconnected.\n");
-                break;
-            }
 
-            // Process received data
-            // printf("Processing data: %s\n", buffer);
-            strcat(message_rec, buffer);
-            send(new_socket, "Ok", strlen("Ok"), 0);
-        };
-
-        //printf("Message received: %s\n", message_rec);
-        int longitud = strlen(message_rec);
-        printf("Longitud: %d\n", longitud);
-        
-
-        if (message_rec[longitud - 1] == '}')
+        // Read size of message first
+        int longitud;
+        if (recv(new_socket, &longitud, sizeof(longitud), 0) == -1)
         {
-            printf("End of message received.\n");
-
-
-            // process_new_request(message_rec);
-
-            enqueue(message_rec);
-
-            // Clear buffer and message received
-            memset(buffer, 0, buffer_size);
-            memset(message_rec, 0, buffer_size);
-            total_bytes_processed = 0;
-            valread = 0;
-
-
-
-
-
-            // Send message to client
-            send(new_socket, hello, strlen(hello), 0);
-            printf("Hello message sent\n");
+            perror("recv");
+            exit(1);
         }
 
+        longitud = ntohl(longitud);
+        printf("Longitud del mensaje: %d\n", longitud);
+        int bytes_recibidos = 0;
+        char buff[longitud + 1];
+
+        while (1)
+        {
+            int bytes_disponibles = recv(new_socket, buff + bytes_recibidos, longitud - bytes_recibidos, 0);
+            if (bytes_disponibles == -1)
+            {
+                // Error al recibir los datos
+                color("Rojo");
+                printf("Error al recibir los datos\n");
+                color("Blanco");
+                break;
+            }
+            else if (bytes_disponibles == 0)
+            {
+                // El cliente ha cerrado la conexión
+                color("Rojo");
+                printf("El cliente ha cerrado la conexión\n");
+                color("Blanco");
+                break;
+            }
+            else
+            {
+                bytes_recibidos += bytes_disponibles;
+                if (bytes_recibidos == longitud)
+                {
+                    // Todos los bytes del mensaje han sido recibidos
+                    color("Verde");
+                    printf("Todos los bytes del mensaje han sido recibidos\n");
+                    printf("Bytes recibidos: %d\n", bytes_recibidos);
+                    color("Blanco");
+                    send(new_socket, "Ok", strlen("Ok"), 0);
+                    break;
+                }
+            }
+        }
+        buff[longitud] = '\0';
+        enqueue(buff);
+
+        // Clear buffer and message received
+        memset(buff, 0, sizeof(buff));
+        
     }
 
     pthread_join(thread_id, NULL);
@@ -142,7 +152,7 @@ void *processing()
         char *message = dequeue();
         if (message != NULL)
         {
-            //printf("Processing message: %s\n", message);
+            // printf("Processing message: %s\n", message);
             printf("Processing msg...");
             process_new_request(message);
         }
@@ -156,13 +166,15 @@ int process_new_request(char *message_received)
 
     json_error_t error; // Estructura para almacenar errores
 
-    //printf("Mensaje recibido: %s\n", message_received);
+    // printf("Mensaje recibido: %s\n", message_received);
 
     json_t *json_obj = json_loads(message_received, 0, &error); // Deserializar la cadena JSON en un objeto JSON
 
     if (json_obj == NULL)
     {
+        color("Rojo");
         fprintf(stderr, "Error: %s\n", error.text); // Imprimir el error en caso de que ocurra
+        color("Blanco");
         return 1;
     }
 
@@ -180,15 +192,16 @@ int process_new_request(char *message_received)
     FILE *out = fopen("procesado.txt", "w");
     if (!out)
     {
+        color("Rojo");
         printf("No se pudo abrir el archivo de salida\n");
+        color("Blanco");
+
         return 1;
     }
     fprintf(out, "%s", base64_string);
     fclose(out);
 
     json_decref(json_obj); // Liberar la memoria utilizada por el objeto JSON
-
-    
 
     return 0;
 }
@@ -232,7 +245,7 @@ char *dequeue()
         {
             front = (front + 1) % MAX_QUEUE_SIZE;
         }
-        
+
         sem_post(&sem_mutex);
         return value;
     }
