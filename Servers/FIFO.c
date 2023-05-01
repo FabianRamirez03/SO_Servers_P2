@@ -22,31 +22,14 @@ int process_new_request(const char *message_received);
 void enqueue(char *value);
 char *dequeue();
 void display();
-void *listen_sock();
+void *processing();
 
 int main(int argc, char **argv)
 {
     pthread_t thread_id;
-    pthread_create(&thread_id, NULL, listen_sock, NULL);
+    pthread_create(&thread_id, NULL, processing, NULL);
     sem_post(&sem_mutex);
 
-    while (1)
-    {
-        char *message = dequeue();
-        if (message != NULL)
-        {
-            printf("Processing message: %s\n", message);
-            process_new_request(message);
-            display();
-        }
-    }
-
-    pthread_join(thread_id, NULL);
-    return 0;
-}
-
-void *listen_sock()
-{
     int server_fd, new_socket, valread;
     struct sockaddr_in address;
     int opt = 1;
@@ -139,6 +122,22 @@ void *listen_sock()
         }
     }
 
+    pthread_join(thread_id, NULL);
+    return 0;
+}
+
+void *processing()
+{
+    while (1)
+    {
+        char *message = dequeue();
+        if (message != NULL)
+        {
+            printf("Processing message: %s\n", message);
+            process_new_request(message);
+            display();
+        }
+    }
     return 0;
 }
 
