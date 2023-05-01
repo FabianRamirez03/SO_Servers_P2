@@ -29,7 +29,8 @@ int process_new_request(char *message_received);
 void enqueue(char *value);
 char *dequeue();
 void display();
-void *processing();
+void *processing(void *arg);
+int base64_to_image(const char *base64_string);
 
 int main(int argc, char **argv)
 {
@@ -143,14 +144,13 @@ int main(int argc, char **argv)
 
         // Clear buffer and message received
         memset(buff, 0, sizeof(buff));
-        
     }
 
     pthread_join(thread_id, NULL);
     return 0;
 }
 
-void *processing()
+void *processing(void *arg)
 {
     while (1)
     {
@@ -194,15 +194,10 @@ int process_new_request(char *message_received)
 
     // Guardar el string en un archivo de texto
 
-    FILE *out = fopen("procesado.txt", "w");
-    if (!out)
-    {
-        color("Rojo");
-        printf("No se pudo abrir el archivo de salida\n");
-        color("Blanco");
+    base64_to_image(base64_string);
+    const char *path = "Servers/FIFO_db/temp.png";
 
-        return 1;
-    }
+    sobel_filter(nombre, path);
 
     json_decref(json_obj); // Liberar la memoria utilizada por el objeto JSON
 
@@ -288,4 +283,38 @@ int queue_size()
         size += strlen(queue[rear]);
         return size;
     }
+}
+
+int base64_to_image(const char *base64_string)
+{
+    char *path_to_save = "./Servers/FIFO_db/temp.png";
+
+    BIO *bio, *b64;
+    FILE *fp;
+    int image_size = strlen(base64_string);
+    char *buffer = (char *)malloc(image_size);
+    memset(buffer, 0, image_size);
+
+    bio = BIO_new_mem_buf((void *)base64_string, -1);
+    b64 = BIO_new(BIO_f_base64());
+    bio = BIO_push(b64, bio);
+
+    BIO_read(bio, buffer, image_size);
+
+    fp = fopen(path_to_save, "wb");
+    if (!fp)
+    {
+        printf("No se pudo abrir el archivo de imagen para escritura\n");
+        BIO_free_all(bio);
+        free(buffer);
+        return -1;
+    }
+
+    fwrite(buffer, 1, image_size, fp);
+    fclose(fp);
+
+    BIO_free_all(bio);
+    free(buffer);
+
+    return 0;
 }
