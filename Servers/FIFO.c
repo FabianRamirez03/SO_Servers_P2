@@ -5,6 +5,11 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <jansson.h>
+#include "../util/sobel.h"
+#include <png.h>
+#include <jpeglib.h>
+#include <openssl/evp.h>
+#include <openssl/bio.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include "../util/tools.h"
@@ -198,8 +203,6 @@ int process_new_request(char *message_received)
 
         return 1;
     }
-    fprintf(out, "%s", base64_string);
-    fclose(out);
 
     json_decref(json_obj); // Liberar la memoria utilizada por el objeto JSON
 
