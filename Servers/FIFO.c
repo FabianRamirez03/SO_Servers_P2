@@ -18,16 +18,14 @@
 #define buffer_size 900000
 #define MAX_BYTES 1024
 
-#define MAX_QUEUE_SIZE 100
+#define MAX_QUEUE_SIZE 150
 
 char queue[MAX_QUEUE_SIZE][100000];
 int front = -1;
 int rear = -1;
 sem_t sem_mutex, sem_tmpImg, sem_contImg; // semaphore variable
 
-sem_init(&sem_tmpImg, 0, 1);
-
-int process_new_request(char *message_received);
+int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg);
 void enqueue(char *value);
 char *dequeue();
 void display();
@@ -38,7 +36,10 @@ int main(int argc, char **argv)
 {
     pthread_t thread_id;
     pthread_create(&thread_id, NULL, processing, NULL);
+
     sem_post(&sem_mutex);
+    sem_post(&sem_tmpImg);
+    sem_post(&sem_contImg);
 
     int server_fd, new_socket, valread;
     struct sockaddr_in address;
@@ -161,13 +162,13 @@ void *processing(void *arg)
         {
             // printf("Processing message: %s\n", message);
             printf("Processing msg...");
-            process_new_request(message);
+            process_new_request(message, sem_tmpImg, sem_contImg);
         }
     }
     return 0;
 }
 
-int process_new_request(char *message_received)
+int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg)
 {
     printf("Incia el procesamiento\n");
 
@@ -194,14 +195,15 @@ int process_new_request(char *message_received)
     printf("Key: %s\n", key);       // Imprimir la cadena con clave "key"
     printf("total: %d\n", total);   // Imprimir el entero con clave "total"
 
-    // Guardar el string en un archivo de texto
+    sem_wait(&sem_tmpImg);
 
-    base64_to_image(base64_string);
-    const char *path = "Servers/FIFO_db";
+    base64_to_image(base64_string); // Modifico la imagen temporal
 
-    sem_tmpImg
-    sobel_filter(nombre, path);
-    sem_tmpImg
+    sem_post(&sem_tmpImg);
+
+    const char *path = "Servers/FIFO_db/";
+
+    sobel_filter(nombre, path, sem_contImg, key);
 
     json_decref(json_obj); // Liberar la memoria utilizada por el objeto JSON
 
