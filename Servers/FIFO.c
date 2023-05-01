@@ -23,7 +23,9 @@
 char queue[MAX_QUEUE_SIZE][100000];
 int front = -1;
 int rear = -1;
-sem_t sem_mutex; // semaphore variable
+sem_t sem_mutex, sem_tmpImg, sem_contImg; // semaphore variable
+
+sem_init(&sem_tmpImg, 0, 1);
 
 int process_new_request(char *message_received);
 void enqueue(char *value);
@@ -195,9 +197,11 @@ int process_new_request(char *message_received)
     // Guardar el string en un archivo de texto
 
     base64_to_image(base64_string);
-    const char *path = "Servers/FIFO_db/temp.png";
+    const char *path = "Servers/FIFO_db";
 
+    sem_tmpImg
     sobel_filter(nombre, path);
+    sem_tmpImg
 
     json_decref(json_obj); // Liberar la memoria utilizada por el objeto JSON
 
