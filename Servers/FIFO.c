@@ -136,7 +136,7 @@ int main(int argc, char **argv)
         buff[longitud] = '\0';
         enqueue(buff);
 
-        // Clear buffer and message received
+        // Clear buffer
         memset(buff, 0, sizeof(buff));
         
     }
@@ -173,7 +173,7 @@ int process_new_request(char *message_received)
     if (json_obj == NULL)
     {
         color("Rojo");
-        fprintf(stderr, "Error: %s\n", error.text); // Imprimir el error en caso de que ocurra
+        printf( "Error: %s\n", error.text); // Imprimir el error en caso de que ocurra
         color("Blanco");
         return 1;
     }
