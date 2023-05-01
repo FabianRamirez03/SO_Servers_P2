@@ -1,4 +1,4 @@
-all: Client fifo 
+all: Client fifo threads
 
 Client:
 	gcc -c Clients/client.c
@@ -7,6 +7,9 @@ Client:
 
 fifo:
 	g++ -o out/FIFO Servers/FIFO.c util/sobel.c `pkg-config --cflags --libs opencv4 jansson` -lssl -lcrypto -pthread -std=c++11
+
+threads:
+	g++ -o out/Threads Servers/Threads.c util/sobel.c `pkg-config --cflags --libs opencv4 jansson` -lssl -lcrypto -pthread -std=c++11
 
 
 libs:

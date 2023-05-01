@@ -23,7 +23,7 @@
 char queue[MAX_QUEUE_SIZE][100000];
 int front = -1;
 int rear = -1;
-sem_t sem_mutex; // semaphore variable
+sem_t sem_mutex, sem_tmpImg, sem_contImg; // semaphore variable
 
 void* process_new_request(void *message_received);
 void enqueue(char *value);
@@ -37,6 +37,9 @@ int main(int argc, char **argv)
     pthread_t thread_id;
     pthread_create(&thread_id, NULL, processing, NULL);
     sem_post(&sem_mutex);
+    sem_post(&sem_tmpImg);
+    sem_post(&sem_contImg);
+
 
     int server_fd, new_socket, valread;
     struct sockaddr_in address;
@@ -196,10 +199,11 @@ void * process_new_request(void *msg)
 
     // Guardar el string en un archivo de texto
 
-    base64_to_image(base64_string);
-    const char *path = "Servers/FIFO_db/temp.png";
-
-    sobel_filter(nombre, path);
+    sem_wait(&sem_tmpImg);
+    base64_to_image(base64_string); // Modifico la imagen temporal
+    sem_post(&sem_tmpImg);
+    const char *path = "Servers/Threads_db/";
+    sobel_filter(nombre, path, sem_contImg, key);
 
     json_decref(json_obj); // Liberar la memoria utilizada por el objeto JSON
 
@@ -289,7 +293,7 @@ int queue_size()
 
 int base64_to_image(const char *base64_string)
 {
-    char *path_to_save = "./Servers/FIFO_db/temp.png";
+    char *path_to_save = "./Servers/Threads_db/temp.png";
 
     BIO *bio, *b64;
     FILE *fp;
