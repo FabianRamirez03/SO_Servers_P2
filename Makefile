@@ -1,4 +1,4 @@
-all: Client fifo
+all: Client fifo 
 
 Client:
 	gcc -c Clients/client.c
@@ -6,9 +6,9 @@ Client:
 	rm client.o
 
 fifo:
-	gcc -c Servers/FIFO.c
-	gcc FIFO.o -o out/FIFO -ljansson  -pthread 
-	rm FIFO.o
+	g++ -o out/FIFO Servers/FIFO.c util/sobel.c `pkg-config --cflags --libs opencv4 jansson` -lssl -lcrypto -std=c++11
 
-sobel:
-	g++ -o out/sobel util/sobel.c `pkg-config --cflags --libs opencv4` -std=c++11
+
+libs:
+	sudo apt-get install libssl-dev
+	sudo apt-get install libjansson-dev

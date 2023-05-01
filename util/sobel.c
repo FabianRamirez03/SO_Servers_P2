@@ -1,14 +1,17 @@
 #include <opencv2/opencv.hpp>
-#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "sobel.h"
 
-int main(int argc, char** argv) {
-    cv::Mat imagen = cv::imread("images/abigail.jpg", cv::IMREAD_GRAYSCALE);
-    if (imagen.empty()) {
+void sobel_filter(const char *nombre, const char *path)
+{
+    cv::Mat imagen = cv::imread(path, cv::IMREAD_GRAYSCALE);
+    if (imagen.empty())
+    {
         std::cout << "Error al cargar la imagen" << std::endl;
-        return -1;
     }
     cv::Mat sobel;
     cv::Sobel(imagen, sobel, CV_8U, 1, 1);
-    cv::imwrite("images/sobel/fifo/abigail_sobel.jpg", sobel);
-    return 0;
+    cv::imwrite("Servers/FIFO_db/sobel.png", sobel);
 }
