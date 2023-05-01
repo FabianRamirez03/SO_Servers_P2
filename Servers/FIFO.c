@@ -84,22 +84,26 @@ int main(int argc, char **argv)
 
         printf("New connection established.\n");
         // Read message from client
-        valread = read(new_socket, buffer, buffer_size);
-        printf("Received %d bytes from client.\n", valread);
-        total_bytes_processed = total_bytes_processed + valread;
-        // Check if client closed connection
-        if (valread == 0)
-        {
-            printf("Client disconnected.\n");
-            break;
-        }
+        while (valread = recv(new_socket, buffer, buffer_size, 0) > 0){
+            printf("Received %d bytes from client.\n", valread);
+            total_bytes_processed = total_bytes_processed + valread;
+            // Check if client closed connection
+            if (valread == 0)
+            {
+                printf("Client disconnected.\n");
+                break;
+            }
 
-        // Process received data
-        // printf("Processing data: %s\n", buffer);
-        strcat(message_rec, buffer);
+            // Process received data
+            // printf("Processing data: %s\n", buffer);
+            strcat(message_rec, buffer);
+            send(new_socket, "Ok", strlen("Ok"), 0);
+        };
+
         printf("Message received: %s\n", message_rec);
         int longitud = strlen(message_rec);
         printf("Longitud: %d\n", longitud);
+        
 
         if (message_rec[longitud - 1] == '}')
         {
@@ -120,9 +124,7 @@ int main(int argc, char **argv)
             send(new_socket, hello, strlen(hello), 0);
             printf("Hello message sent\n");
         }
-        else{
-            send(new_socket, "Ok", strlen("Ok"), 0);
-        }
+
     }
 
     pthread_join(thread_id, NULL);

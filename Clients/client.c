@@ -62,6 +62,8 @@ int new_connection(char * json_str, int port){
     send(sock, json_str, strlen(json_str), 0);
     printf("Hello message sent\n");
 
+
+
     // Read message from server
     valread = read(sock, buffer, buffer_size);
     printf("%s\n", buffer);
@@ -153,9 +155,7 @@ int main(int argc, char *argv[]) {
 	json_object_set_new(data_to_send, "total", json_integer(threads*cycles));   // Agregar un entero con clave "total"
     
     char *json_str = json_dumps(data_to_send, JSON_ENCODE_ANY);  // Convertir el objeto JSON en una cadena JSON
-    
-    //Add three '*' at the end of json_str
-    //strcat(json_str, "***");
+
     
     //printf("json: %s\n", json_str);  // Imprimir la cadena JSON
     
