@@ -97,14 +97,14 @@ int main(int argc, char **argv)
         // Process received data
         // printf("Processing data: %s\n", buffer);
         strcat(message_rec, buffer);
+        printf("Message received: %s\n", message_rec);
+        int longitud = strlen(message_rec);
+        printf("Longitud: %d\n", longitud);
 
-        if (buffer[valread - 1] == '*' && buffer[valread - 2] == '*' && buffer[valread - 3] == '*')
+        if (message_rec[longitud - 1] == '}')
         {
             printf("End of message received.\n");
-            // Remove last 3 characters
-            message_rec[strlen(message_rec) - 3] = '\0';
 
-            buffer[strlen(buffer) - 3] = '\0';
 
             // process_new_request(message_rec);
 
@@ -119,6 +119,9 @@ int main(int argc, char **argv)
             // Send message to client
             send(new_socket, hello, strlen(hello), 0);
             printf("Hello message sent\n");
+        }
+        else{
+            send(new_socket, "Ok", strlen("Ok"), 0);
         }
     }
 
