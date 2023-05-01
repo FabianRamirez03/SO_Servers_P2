@@ -9,15 +9,81 @@
 #include <openssl/evp.h>
 #include <openssl/buffer.h>
 #include <jansson.h>
+#include <pthread.h>
+#include <semaphore.h>
+
 
 #define KEY_LENGTH 32
 #define buffer_size 1000000
-
 // Inicializar funciones
 int is_valid_image_path(char *image_path);
 char* image_to_base64(char* image_path);
 char* generate_key(void);
 char* get_filename(char* path);
+
+sem_t semaphore;
+
+struct thread_args {
+    char* json_str;
+    int cycles;
+    int port;
+};
+
+int new_connection(char * json_str, int port){
+    int sock = 0, valread;
+    struct sockaddr_in serv_addr;
+    char *hello = "Hello from client";
+    char buffer[buffer_size] = {0};
+
+    // Create socket file descriptor
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        printf("\n Socket creation error \n");
+        return -1;
+    }
+
+    // Set server address and port
+    memset(&serv_addr, '0', sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(port);
+
+    // Convert IP address from text to binary form
+    if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0) {
+        printf("\nInvalid address/ Address not supported \n");
+        return -1;
+    }
+
+    // Connect to server
+    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+        printf("\nConnection Failed \n");
+        return -1;
+    }
+
+    //Send the PCK
+    send(sock, json_str, strlen(json_str), 0);
+    printf("Hello message sent\n");
+
+    // Read message from server
+    valread = read(sock, buffer, buffer_size);
+    printf("%s\n", buffer);
+    
+    // Close socket
+    close(sock);
+}
+
+void *send_pkg(void *arg){
+    struct thread_args *my_args = (struct thread_args *)arg;
+    char * json_str = my_args->json_str;
+    int cycles = my_args->cycles;
+    int port = my_args->port;
+
+    for (int i = 0; i < cycles ; i++){
+        sem_wait(&semaphore);
+        new_connection(json_str, port);
+        //sleep(3);
+        sem_post(&semaphore);     
+    }
+}
+
 
 int main(int argc, char *argv[]) {
 
@@ -31,7 +97,7 @@ int main(int argc, char *argv[]) {
     char ip[50] = "";
 
 	char* image_base64;
-    
+    sem_init(&semaphore, 0, 1);
 
 	char* key = generate_key();
 	printf("Generated key: %s\n", key);
@@ -91,52 +157,31 @@ int main(int argc, char *argv[]) {
     //Add three '*' at the end of json_str
     strcat(json_str, "***");
     
-    printf("json: %s\n", json_str);  // Imprimir la cadena JSON
-
-
-	
-    int sock = 0, valread;
-    struct sockaddr_in serv_addr;
-    char *hello = "Hello from client";
-    char buffer[buffer_size] = {0};
-
-    // Create socket file descriptor
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        printf("\n Socket creation error \n");
-        return -1;
-    }
-
-    // Set server address and port
-    memset(&serv_addr, '0', sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(port);
-
-    // Convert IP address from text to binary form
-    if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0) {
-        printf("\nInvalid address/ Address not supported \n");
-        return -1;
-    }
-
-    // Connect to server
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-        printf("\nConnection Failed \n");
-        return -1;
-    }
-
+    //printf("json: %s\n", json_str);  // Imprimir la cadena JSON
+    
     // Send message to server
-    send(sock, json_str, strlen(json_str), 0);
-    printf("Hello message sent\n");
+    for (int  i = 0 ; i < threads ; i++){
 
-    // Read message from server
-    valread = read(sock, buffer, buffer_size);
-    printf("%s\n", buffer);
+        struct thread_args *args = (struct thread_args *)malloc(sizeof(struct thread_args));
+        args->json_str = json_str;
+        args->cycles = cycles;
+        args->port = port;
 
-    // Close socket
-    close(sock);
+        pthread_t thread;
+        pthread_create(&thread, NULL, send_pkg, args);
+        pthread_join(thread, NULL);
 
+        //send_pkg(args);
+    }
+    
     return 0;
 	
 }
+
+
+
+
+
 
 // Función que verifica si un string es un path válido a una imagen
 int is_valid_image_path(char *image_path) {

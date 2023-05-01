@@ -133,7 +133,8 @@ void *processing()
         char *message = dequeue();
         if (message != NULL)
         {
-            printf("Processing message: %s\n", message);
+            //printf("Processing message: %s\n", message);
+            printf("Processing msg...");
             process_new_request(message);
             display();
         }
@@ -147,7 +148,7 @@ int process_new_request(const char *message_received)
 
     json_error_t error; // Estructura para almacenar errores
 
-    printf("Mensaje recibido: %s\n", message_received);
+    //printf("Mensaje recibido: %s\n", message_received);
 
     json_t *json_obj = json_loads(message_received, 0, &error); // Deserializar la cadena JSON en un objeto JSON
 

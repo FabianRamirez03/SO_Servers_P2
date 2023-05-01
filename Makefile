@@ -2,7 +2,7 @@ all: Client fifo
 
 Client:
 	gcc -c Clients/client.c
-	gcc client.o -o out/client -lssl -lcrypto -lm -ljansson
+	gcc client.o -o out/client -lssl -lcrypto -lm -ljansson -pthread
 	rm client.o
 
 fifo:
