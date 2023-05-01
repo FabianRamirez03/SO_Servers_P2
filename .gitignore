@@ -2,3 +2,4 @@
 out/
 
 .vscode/
+Servers/FIFO_db/*
