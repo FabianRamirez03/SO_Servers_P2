@@ -20,7 +20,7 @@
 int front_pid = -1;
 int rear_pid = -1;
 
-void enqueue_pid(pid_t value, int queue [MAX_QUEUE_SIZE_PID], sem_t sem_mutex)
+void enqueue_pid(pid_t value, pid_t * queue, sem_t sem_mutex)
 {
     sem_wait(&sem_mutex);
     if ((front_pid == rear_pid + 1) || (front_pid == 0 && rear_pid == MAX_QUEUE_SIZE_PID - 1))
