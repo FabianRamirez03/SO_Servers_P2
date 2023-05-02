@@ -18,8 +18,9 @@
 #include <sys/stat.h>
 #include "../util/img_processing.h"
 #include "../util/queue.h"
+#include <sys/resource.h>
 
-#define PORT 8081
+#define PORT 8083
 #define buffer_size 900000
 #define MAX_BYTES 1024
 
@@ -27,20 +28,34 @@
 
 char queue[MAX_QUEUE_SIZE][100000];
 
+int requests_processed = 0;
+long double cpu_anterior = 0;
+char llave[MAX_BYTES];
+
 sem_t sem_mutex, sem_tmpImg, sem_contImg; // semaphore variable
 sem_t sem_pid;                            // semaphore variable
 char jason[buffer_size];
 pid_t PARENT_PID;
 
-int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg);
+sem_t sem_data;
+
+int num_children = 0;
+int zombie_children = 1;
+
+
+
+int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg, sem_t sem_data);
+int save_data(double cpu_time_used, int total);
 
 void display();
 void *processing(void *arg);
+void sigchld_handler(int sig);
 
 int main(int argc, char **argv)
 {
 
     sem_init(&sem_pid, 0, 1); // Inicializa el semáforo en 1
+	sem_init(&sem_data, 0, 1);
     sem_init(&sem_mutex, 0, 1);
 
     pthread_t thread_id;
@@ -199,7 +214,7 @@ void *processing(void *arg)
                     printf("Nuevo heavy proccess creado \n-> Parent ID:%d\n", getppid());
                     color("Blanco");
 
-                    int finished = process_new_request(message, sem_tmpImg, sem_contImg);
+                    process_new_request(message, sem_tmpImg, sem_contImg, sem_data);
                     exit(0);
                 }
             }
@@ -207,8 +222,13 @@ void *processing(void *arg)
     }
 }
 
-int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg)
+int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg, sem_t sem_data)
 {
+	clock_t start, end;
+	double cpu_time_used;
+
+	start = clock();
+
     printf("Inicia el procesamiento\n");
 
     json_error_t error; // Estructura para almacenar errores
@@ -242,12 +262,17 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
     int total = json_integer_value(json_object_get(json_obj, "total"));          // Obtener el entero con clave "edad"
     const char *base64_string = json_string_value(json_object_get(json_obj, "data"));
 
-    printf("Nombre: %s\n", nombre); // Imprimir la cadena con clave "nombre"
-    printf("Key: %s\n", key);       // Imprimir la cadena con clave "key"
-    printf("total: %d\n", total);   // Imprimir el entero con clave "total"
 
     // Guardar el string en un archivo de texto
     const char *path = "Servers/heavy_db/";
+	
+	// compare key with llave
+	if (strcmp(key, llave) != 0)
+	{
+		// llave = key;
+		strcpy(llave, key);
+	}
+
     sem_wait(&sem_tmpImg);
     base64_to_image(base64_string, key, path); // Modifico la imagen temporal
     sem_post(&sem_tmpImg);
@@ -256,5 +281,69 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
 
     json_decref(json_obj); // Liberar la memoria utilizada por el objeto JSON
 
+	
+	// Almacenamiento de datos
+	end = clock();
+	cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+
+	sem_wait(&sem_data);
+	save_data(cpu_time_used, total);
+	sem_post(&sem_data);
+	
     return 0;
 }
+
+int save_data(double cpu_time_used, int total){
+	requests_processed ++;
+	FILE *csv_file = fopen("GUI/data/Heavy_single.csv", "a");
+	if (csv_file == NULL)
+    {
+        printf("Error al abrir el archivo\n");
+        return 1;
+    }
+	fprintf(csv_file, "%f,%s\n", cpu_time_used, llave);
+	fclose(csv_file);
+	if (requests_processed ==  total){
+		printf("Guarda datos finales\n");
+		FILE *csv_file = fopen("GUI/data/Heavy.csv", "a");
+		if (csv_file == NULL)
+		{
+		    printf("Error al abrir el archivo\n");
+		    return 1;
+		}
+
+		color("Cyan");
+        printf("Se han procesado todos los mensajes\n");
+
+		struct rusage usage;
+
+		// Obtener el uso de recursos del proceso actual
+		if (getrusage(RUSAGE_SELF, &usage) != 0)
+		{
+			printf("Error al obtener el uso de recursos\n");
+			return 1;
+		}
+
+		// Imprimir la cantidad de memoria utilizada en KB
+		printf("Memoria utilizada: %ld KB\n", usage.ru_maxrss);
+
+		// Imprimir el tiempo de CPU utilizado en segundos y guardarlo en una variable
+		long double tiempo_cpu = (long double)usage.ru_stime.tv_sec + ((long double)usage.ru_stime.tv_usec / 1000000.0) - cpu_anterior;
+		printf("Tiempo de CPU utilizado: %Lfsegundos\n", tiempo_cpu);
+		printf("Tiempo de CPU del sistema utilizado: %ld.%06ld segundos\n", usage.ru_stime.tv_sec, usage.ru_stime.tv_usec);
+		cpu_anterior = (long double)usage.ru_stime.tv_sec + ((long double)usage.ru_stime.tv_usec / 1000000.0);
+
+		char memory[20];
+
+		sprintf(memory, "%ld", usage.ru_maxrss);
+
+		fprintf(csv_file, "%s,%Lf,%d\n", memory, tiempo_cpu, total);
+		fclose(csv_file);
+		requests_processed = 0;
+		return 0;
+
+	}
+	return 0;
+
+}
+

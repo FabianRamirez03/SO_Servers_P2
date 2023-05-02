@@ -22,8 +22,14 @@ install_libs:
 	sudo apt-get install libjansson-dev
 	sudo apt-get install libjpeg-dev
 
-run_client:
-	./out/client -p 8081 -t 2 -c 5 -i ./images/arbol.png -ip 218.122.255 -lz
+run_client_fifo:
+	./out/client -p 8081 -t 2 -c 5 -i ./images/arbol.png -ip 127.0.0.1 -lz
+
+run_client_threads:
+	./out/client -p 8082 -t 20 -c 2 -i ./images/arbol.png -ip 127.0.0.1 -lz
+
+run_client_heavy:
+	./out/client -p 8083 -t 2 -c 1 -i ./images/beagle.png -ip 127.0.0.1 -lz
 
 run_fifo:
 	rm -rf ./Servers/FIFO_db/*
@@ -39,6 +45,9 @@ run_threads:
 	rm -rf ./Servers/threads_db/*
 	mkdir ./Servers/threads_db/tmp/
 	./out/Threads
+
+run_visualizer:
+	python3 GUI/main.py
 
 run_pre_heavy:
 	rm -rf ./Servers/pre_heavy_db/*
