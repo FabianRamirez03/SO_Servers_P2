@@ -13,9 +13,13 @@ int save_sobel_result(cv::Mat sobel, const char *path, const char *client_id, co
 
 void sobel_filter(const char *nombre, const char *path, sem_t semaphore, const char *client_id)
 {
-    char temp_path[50];
+    /*char temp_path[50];
     strcpy(temp_path, path);
-    strcat(temp_path, "temp.png");
+    strcat(temp_path, "temp.png");*/
+
+    char result_name[256];
+    snprintf(result_name, sizeof(result_name), "%s/tmp/tmp_%s.png", path, client_id);
+    const char *temp_path = result_name;
 
     cv::Mat imagen = cv::imread(temp_path, cv::IMREAD_GRAYSCALE);
     if (imagen.empty())

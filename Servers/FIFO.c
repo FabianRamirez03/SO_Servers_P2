@@ -13,24 +13,26 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include "../util/tools.h"
+#include "../util/img_processing.h"
+#include "../util/queue.h"
 
 #define PORT 8081
 #define buffer_size 900000
 #define MAX_BYTES 1024
 
-#define MAX_QUEUE_SIZE 150
+//#define MAX_QUEUE_SIZE 150
 
 char queue[MAX_QUEUE_SIZE][100000];
-int front = -1;
-int rear = -1;
+/*int front = -1;
+int rear = -1;*/
 sem_t sem_mutex, sem_tmpImg, sem_contImg; // semaphore variable
 
 int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg);
-void enqueue(char *value);
-char *dequeue();
-void display();
+//void enqueue(char *value);
+//char *dequeue();
+//void display();
 void *processing(void *arg);
-int base64_to_image(const char *base64_string);
+//int base64_to_image(const char *base64_string);
 
 int main(int argc, char **argv)
 {
@@ -143,7 +145,7 @@ int main(int argc, char **argv)
             }
         }
         buff[longitud] = '\0';
-        enqueue(buff);
+        enqueue(buff, queue, sem_mutex);
 
         // Clear buffer
         memset(buff, 0, sizeof(buff));
@@ -157,7 +159,7 @@ void *processing(void *arg)
 {
     while (1)
     {
-        char *message = dequeue();
+        char *message = dequeue(sem_mutex, queue);
         if (message != NULL)
         {
             // printf("Processing message: %s\n", message);
@@ -195,13 +197,13 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
     printf("Key: %s\n", key);       // Imprimir la cadena con clave "key"
     printf("total: %d\n", total);   // Imprimir el entero con clave "total"
 
+    const char *path = "Servers/FIFO_db";
+
     sem_wait(&sem_tmpImg);
-
-    base64_to_image(base64_string); // Modifico la imagen temporal
-
+    base64_to_image(base64_string, key, path); // Modifico la imagen temporal
     sem_post(&sem_tmpImg);
 
-    const char *path = "Servers/FIFO_db/";
+    
 
     sobel_filter(nombre, path, sem_contImg, key);
 
@@ -210,6 +212,7 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
     return 0;
 }
 
+/*
 void enqueue(char *value)
 {
     sem_wait(&sem_mutex);
@@ -323,4 +326,4 @@ int base64_to_image(const char *base64_string)
     free(buffer);
 
     return 0;
-}
+}*/
