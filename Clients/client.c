@@ -36,7 +36,6 @@ int new_connection(char * json_str, int port, char * ip){
     struct sockaddr_in serv_addr;
     char *hello = "Hello from client";
     char buffer[buffer_size] = {0};
-	printf("Ip; \n", ip);
 
     // Create socket file descriptor
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {

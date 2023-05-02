@@ -252,7 +252,7 @@ int save_data(double cpu_time_used, int total){
 		if (csv_file == NULL)
 		{
 		    printf("Error al abrir el archivo\n");
-		    return NULL;
+		    return 1;
 		}
 
 		color("Cyan");
@@ -264,7 +264,7 @@ int save_data(double cpu_time_used, int total){
 		if (getrusage(RUSAGE_SELF, &usage) != 0)
 		{
 			printf("Error al obtener el uso de recursos\n");
-			return NULL;
+			return 1;
 		}
 
 		// Imprimir la cantidad de memoria utilizada en KB
@@ -283,8 +283,10 @@ int save_data(double cpu_time_used, int total){
 		fprintf(csv_file, "%s,%Lf,%d\n", memory, tiempo_cpu, total);
 		fclose(csv_file);
 		requests_processed = 0;
+		return 0;
 
 	}
+	return 0;
 
 
 
