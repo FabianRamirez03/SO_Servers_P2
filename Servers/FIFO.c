@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
@@ -12,6 +13,7 @@
 #include <openssl/bio.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <sys/resource.h>
 #include "../util/tools.h"
 #include "../util/img_processing.h"
 #include "../util/queue.h"
@@ -20,13 +22,13 @@
 #define buffer_size 900000
 #define MAX_BYTES 1024
 
-
 char queue[MAX_QUEUE_SIZE][100000];
 
 sem_t sem_mutex, sem_tmpImg, sem_contImg; // semaphore variable
 
 int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg);
-
+int total;
+char llave[MAX_BYTES];
 void *processing(void *arg);
 
 int main(int argc, char **argv)
@@ -152,14 +154,92 @@ int main(int argc, char **argv)
 
 void *processing(void *arg)
 {
+    clock_t start, end;
+    double cpu_time_used;
+    int i;
+    int restart = 0;
+    long int vol_anterior = 0;
+    long int invol_anterior = 0;
+
+    FILE *csv_file = fopen("GUI/data/FIFO_single.csv", "a");
+    if (csv_file == NULL)
+    {
+        printf("Error al abrir el archivo\n");
+        return NULL;
+    }
     while (1)
     {
         char *message = dequeue(sem_mutex, queue);
         if (message != NULL)
         {
+            i++;
+            start = clock();
             // printf("Processing message: %s\n", message);
             printf("Processing msg...");
             process_new_request(message, sem_tmpImg, sem_contImg);
+            end = clock();
+            cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+            fprintf(csv_file, "%f, %s\n",cpu_time_used, llave);
+            printf("%d: time %f Key: %s\n", i, cpu_time_used, llave);
+        }
+        if (i == total && total != 0)
+        {
+            fclose(csv_file);
+            color("Cyan");
+            printf("Se han procesado todos los mensajes\n");
+        
+            sleep(1);
+
+            // CSV
+            FILE *csv_file = fopen("GUI/data/FIFO.csv", "a");
+            if (csv_file == NULL)
+            {
+                printf("Error al abrir el archivo\n");
+                return NULL;
+            }
+
+            struct rusage usage;
+
+            // Obtener el uso de recursos del proceso actual
+            if (getrusage(RUSAGE_SELF, &usage) != 0) {
+                printf("Error al obtener el uso de recursos\n");
+                return NULL;
+            }
+
+            // Imprimir la cantidad de memoria utilizada en KB
+            printf("Memoria utilizada: %ld KB\n", usage.ru_maxrss);
+
+            // Obtiene el numero de cambios de contexto voluntarios e involuntarios
+            long int vol = usage.ru_idrss- vol_anterior;
+            
+            printf("Tamaño de datos no compartidos: %ld\n", vol);
+            vol_anterior = usage.ru_idrss;
+
+            color("Blanco");
+
+            char memory[20];
+
+            sprintf(memory, "%ld", usage.ru_maxrss);
+
+            fprintf(csv_file, "%s, %ld, %d\n", memory, vol, total);
+            fclose(csv_file);
+
+            restart = 1;
+            total = 0;
+
+
+        }
+        if (restart == 1)
+        {
+            printf("Reiniciando...\n");
+            i = 0;
+            restart = 0;
+            csv_file = fopen("Servers/FIFO_db/FIFO.csv", "a");
+            if (csv_file == NULL)
+            {
+                printf("Error al abrir el archivo\n");
+                return NULL;
+            }
         }
     }
     return 0;
@@ -178,14 +258,14 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
     if (json_obj == NULL)
     {
         color("Rojo");
-        printf( "Error: %s\n", error.text); // Imprimir el error en caso de que ocurra
+        printf("Error: %s\n", error.text); // Imprimir el error en caso de que ocurra
         color("Blanco");
         return 1;
     }
 
     const char *nombre = json_string_value(json_object_get(json_obj, "nombre")); // Obtener la cadena con clave "nombre"
     const char *key = json_string_value(json_object_get(json_obj, "key"));       // Obtener la cadena con clave "nombre"
-    int total = json_integer_value(json_object_get(json_obj, "total"));          // Obtener el entero con clave "edad"
+    total = json_integer_value(json_object_get(json_obj, "total"));              // Obtener el entero con clave "edad"
     const char *base64_string = json_string_value(json_object_get(json_obj, "data"));
 
     printf("Nombre: %s\n", nombre); // Imprimir la cadena con clave "nombre"
@@ -194,11 +274,16 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
 
     const char *path = "Servers/FIFO_db/";
 
+    //compare key with llave
+    if (strcmp(key, llave) != 0)
+    {
+        // llave = key;
+        strcpy(llave, key);
+    }
+
     sem_wait(&sem_tmpImg);
     base64_to_image(base64_string, key, path); // Modifico la imagen temporal
     sem_post(&sem_tmpImg);
-
-    
 
     sobel_filter(nombre, path, sem_contImg, key);
 
@@ -206,4 +291,3 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
 
     return 0;
 }
-
