@@ -192,7 +192,7 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
     printf("Key: %s\n", key);       // Imprimir la cadena con clave "key"
     printf("total: %d\n", total);   // Imprimir el entero con clave "total"
 
-    const char *path = "Servers/FIFO_db";
+    const char *path = "Servers/FIFO_db/";
 
     sem_wait(&sem_tmpImg);
     base64_to_image(base64_string, key, path); // Modifico la imagen temporal

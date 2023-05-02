@@ -18,7 +18,7 @@ void sobel_filter(const char *nombre, const char *path, sem_t semaphore, const c
     strcat(temp_path, "temp.png");*/
 
     char result_name[256];
-    snprintf(result_name, sizeof(result_name), "%s/tmp/tmp_%s.png", path, client_id);
+    snprintf(result_name, sizeof(result_name), "%stmp/tmp_%s.png", path, client_id);
     const char *temp_path = result_name;
 
     cv::Mat imagen = cv::imread(temp_path, cv::IMREAD_GRAYSCALE);

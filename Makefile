@@ -31,3 +31,8 @@ run_heavy_process:
 	rm -rf ./Servers/heavy_db/*
 	mkdir ./Servers/heavy_db/tmp/
 	./out/heavy_process
+
+run_threads:
+	rm -rf ./Servers/threads_db/*
+	mkdir ./Servers/threads_db/tmp/
+	./out/Threads

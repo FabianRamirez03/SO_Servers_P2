@@ -11,7 +11,7 @@ int base64_to_image(const char *base64_string, const char *key, const char* path
 {
     // const char *path_to_save = "./Servers/heavy_db/temp.png";
     char result_name[256];
-    snprintf(result_name, sizeof(result_name), "%s/tmp/tmp_%s.png",path,  key);
+    snprintf(result_name, sizeof(result_name), "%stmp/tmp_%s.png",path,  key);
     const char *path_to_save = result_name;
 
     BIO *bio, *b64;

@@ -234,14 +234,10 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
     printf("total: %d\n", total);   // Imprimir el entero con clave "total"
 
     // Guardar el string en un archivo de texto
-    const char *path = "Servers/heavy_db";
+    const char *path = "Servers/heavy_db/";
     sem_wait(&sem_tmpImg);
     base64_to_image(base64_string, key, path); // Modifico la imagen temporal
     sem_post(&sem_tmpImg);
-
-    
-
-
 
     sobel_filter(nombre, path, sem_contImg, key);
 

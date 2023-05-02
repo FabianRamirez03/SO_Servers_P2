@@ -13,24 +13,21 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include "../util/tools.h"
+#include "../util/img_processing.h"
+#include "../util/queue.h"
 
 #define PORT 8081
 #define buffer_size 900000
 #define MAX_BYTES 1024
 
-#define MAX_QUEUE_SIZE 100
 
 char queue[MAX_QUEUE_SIZE][100000];
-int front = -1;
-int rear = -1;
+
 sem_t sem_mutex, sem_tmpImg, sem_contImg; // semaphore variable
 
 void* process_new_request(void *message_received);
-void enqueue(char *value);
-char *dequeue();
-void display();
+
 void *processing(void *arg);
-int base64_to_image(const char *base64_string);
 
 int main(int argc, char **argv)
 {
@@ -143,7 +140,7 @@ int main(int argc, char **argv)
             }
         }
         buff[longitud] = '\0';
-        enqueue(buff);
+        enqueue(buff, queue, sem_mutex);
 
         // Clear buffer
         memset(buff, 0, sizeof(buff));
@@ -157,7 +154,7 @@ void *processing(void *arg)
 {
     while (1)
     {
-        char *message = dequeue();
+        char *message = dequeue(sem_mutex, queue);
         if (message != NULL)
         {
             //call processing function in a new thread
@@ -198,11 +195,12 @@ void * process_new_request(void *msg)
     printf("total: %d\n", total);   // Imprimir el entero con clave "total"
 
     // Guardar el string en un archivo de texto
-
+    const char *path = "Servers/threads_db/";
     sem_wait(&sem_tmpImg);
-    base64_to_image(base64_string); // Modifico la imagen temporal
+    base64_to_image(base64_string,key,  path); // Modifico la imagen temporal
     sem_post(&sem_tmpImg);
-    const char *path = "Servers/Threads_db/";
+
+    //const char *path = "Servers/Threads_db/";
     sobel_filter(nombre, path, sem_contImg, key);
 
     json_decref(json_obj); // Liberar la memoria utilizada por el objeto JSON
@@ -210,117 +208,3 @@ void * process_new_request(void *msg)
     return 0;
 }
 
-void enqueue(char *value)
-{
-    sem_wait(&sem_mutex);
-    if ((front == rear + 1) || (front == 0 && rear == MAX_QUEUE_SIZE - 1))
-    {
-        printf("Queue is full\n");
-    }
-    else
-    {
-        if (front == -1)
-        {
-            front = 0;
-        }
-        rear = (rear + 1) % MAX_QUEUE_SIZE;
-        strcpy(queue[rear], value);
-    }
-    sem_post(&sem_mutex); // release semaphore
-}
-
-char *dequeue()
-{
-    sem_wait(&sem_mutex);
-    if (front == -1 || front > rear)
-    {
-        sem_post(&sem_mutex);
-        return NULL;
-    }
-    else
-    {
-        char *value = queue[front];
-        if (front == rear)
-        {
-            front = -1;
-            rear = -1;
-        }
-        else
-        {
-            front = (front + 1) % MAX_QUEUE_SIZE;
-        }
-
-        sem_post(&sem_mutex);
-        return value;
-    }
-}
-
-void display()
-{
-    if (front == -1)
-    {
-        printf("Queue is empty\n");
-    }
-    else
-    {
-        // print size and front and rear
-        printf("Queue size: %d\n", rear + 1);
-        printf("Front index: %d\n", front);
-        printf("Rear index: %d\n", rear);
-    }
-}
-
-int queue_size()
-// returns the size in bytes of the queue
-{
-    if (front == -1)
-    {
-        printf("Queue is empty\n");
-        return 0;
-    }
-    else
-    {
-        int size = 0;
-        int i;
-        for (i = front; i != rear; i = (i + 1) % MAX_QUEUE_SIZE)
-        {
-            size += strlen(queue[i]);
-        }
-        size += strlen(queue[rear]);
-        return size;
-    }
-}
-
-int base64_to_image(const char *base64_string)
-{
-    char *path_to_save = "./Servers/Threads_db/temp.png";
-
-    BIO *bio, *b64;
-    FILE *fp;
-    int image_size = strlen(base64_string);
-    char *buffer = (char *)malloc(image_size);
-    memset(buffer, 0, image_size);
-
-    bio = BIO_new_mem_buf((void *)base64_string, -1);
-    b64 = BIO_new(BIO_f_base64());
-    bio = BIO_push(b64, bio);
-
-    BIO_read(bio, buffer, image_size);
-
-    fp = fopen(path_to_save, "wb");
-    if (!fp)
-    {
-        printf("No se pudo abrir el archivo de imagen para escritura\n");
-        BIO_free_all(bio);
-        free(buffer);
-        return -1;
-    }
-
-    fwrite(buffer, 1, image_size, fp);
-    fclose(fp);
-
-    BIO_free_all(bio);
-    free(buffer);
-
-    return 0;
-}
