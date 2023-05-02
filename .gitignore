@@ -2,3 +2,5 @@
 out/
 
 .vscode/
+Servers/FIFO_db/*
+Servers/Threads_db/

@@ -18,14 +18,14 @@
 #define buffer_size 900000
 #define MAX_BYTES 1024
 
-#define MAX_QUEUE_SIZE 150
+#define MAX_QUEUE_SIZE 100
 
 char queue[MAX_QUEUE_SIZE][100000];
 int front = -1;
 int rear = -1;
 sem_t sem_mutex, sem_tmpImg, sem_contImg; // semaphore variable
 
-int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg);
+void* process_new_request(void *message_received);
 void enqueue(char *value);
 char *dequeue();
 void display();
@@ -36,10 +36,10 @@ int main(int argc, char **argv)
 {
     pthread_t thread_id;
     pthread_create(&thread_id, NULL, processing, NULL);
-
     sem_post(&sem_mutex);
     sem_post(&sem_tmpImg);
     sem_post(&sem_contImg);
+
 
     int server_fd, new_socket, valread;
     struct sockaddr_in address;
@@ -48,7 +48,7 @@ int main(int argc, char **argv)
     char buffer[buffer_size] = {0};
     char message_rec[buffer_size] = {0};
     message_rec[sizeof(message_rec) - 1] = '\0';
-    const char *hello = "Hello from server";
+    char *hello = "Hello from server";
     int total_bytes_processed = 0;
 
     // Create socket file descriptor
@@ -160,17 +160,19 @@ void *processing(void *arg)
         char *message = dequeue();
         if (message != NULL)
         {
-            // printf("Processing message: %s\n", message);
-            printf("Processing msg...");
-            process_new_request(message, sem_tmpImg, sem_contImg);
+            //call processing function in a new thread
+            pthread_t thread_id;
+            pthread_create(&thread_id, NULL, process_new_request, message);
         }
     }
     return 0;
 }
 
-int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg)
+void * process_new_request(void *msg)
 {
     printf("Incia el procesamiento\n");
+    
+    char * message_received = (char *)msg;
 
     json_error_t error; // Estructura para almacenar errores
 
@@ -183,7 +185,7 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
         color("Rojo");
         printf( "Error: %s\n", error.text); // Imprimir el error en caso de que ocurra
         color("Blanco");
-        return 1;
+        return NULL;
     }
 
     const char *nombre = json_string_value(json_object_get(json_obj, "nombre")); // Obtener la cadena con clave "nombre"
@@ -195,14 +197,12 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
     printf("Key: %s\n", key);       // Imprimir la cadena con clave "key"
     printf("total: %d\n", total);   // Imprimir el entero con clave "total"
 
+    // Guardar el string en un archivo de texto
+
     sem_wait(&sem_tmpImg);
-
     base64_to_image(base64_string); // Modifico la imagen temporal
-
     sem_post(&sem_tmpImg);
-
-    const char *path = "Servers/FIFO_db/";
-
+    const char *path = "Servers/Threads_db/";
     sobel_filter(nombre, path, sem_contImg, key);
 
     json_decref(json_obj); // Liberar la memoria utilizada por el objeto JSON
@@ -293,7 +293,7 @@ int queue_size()
 
 int base64_to_image(const char *base64_string)
 {
-    const char *path_to_save = "./Servers/FIFO_db/temp.png";
+    char *path_to_save = "./Servers/Threads_db/temp.png";
 
     BIO *bio, *b64;
     FILE *fp;
