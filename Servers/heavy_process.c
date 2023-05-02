@@ -19,7 +19,6 @@
 #include "../util/img_processing.h"
 #include "../util/queue.h"
 
-
 #define PORT 8081
 #define buffer_size 900000
 #define MAX_BYTES 1024
@@ -30,7 +29,7 @@ char queue[MAX_QUEUE_SIZE][100000];
 
 sem_t sem_mutex, sem_tmpImg, sem_contImg; // semaphore variable
 sem_t sem_pid;                            // semaphore variable
-
+char jason[buffer_size];
 pid_t PARENT_PID;
 
 int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg);
@@ -42,11 +41,11 @@ int main(int argc, char **argv)
 {
 
     sem_init(&sem_pid, 0, 1); // Inicializa el semáforo en 1
+    sem_init(&sem_mutex, 0, 1);
 
     pthread_t thread_id;
     pthread_create(&thread_id, NULL, processing, NULL);
 
-    sem_post(&sem_mutex);
     sem_post(&sem_tmpImg);
     sem_post(&sem_contImg);
 
@@ -170,18 +169,21 @@ void *processing(void *arg)
 
     while (1)
     {
-        char *message = dequeue(sem_mutex, queue);
-        if (message != NULL)
-        {
-            printf("Processing msg...\n");
 
-            // Creating new child processes.
-            pid_t pid;
+        // Creating new child processes.
+        pid_t pid;
+        sem_wait(&sem_pid);
+        pid_t current_pid = getpid();
+        sem_post(&sem_pid);
+        if (current_pid == PARENT_PID)
+        {
+            // sleep(1);
             sem_wait(&sem_pid);
-            pid_t current_pid = getpid();
+            char *message = dequeue(sem_mutex, queue);
             sem_post(&sem_pid);
-            if (current_pid == PARENT_PID)
+            if (message != NULL)
             {
+                printf("Processing msg...\n");
 
                 pid = fork(); // creación del proceso hijo
 
@@ -197,7 +199,7 @@ void *processing(void *arg)
                     printf("Nuevo heavy proccess creado \n-> Parent ID:%d\n", getppid());
                     color("Blanco");
 
-                    process_new_request(message, sem_tmpImg, sem_contImg);
+                    int finished = process_new_request(message, sem_tmpImg, sem_contImg);
                     exit(0);
                 }
             }
@@ -207,7 +209,7 @@ void *processing(void *arg)
 
 int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg)
 {
-    printf("Incia el procesamiento\n");
+    printf("Inicia el procesamiento\n");
 
     json_error_t error; // Estructura para almacenar errores
 
@@ -219,10 +221,22 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
     {
         color("Rojo");
         fprintf(stderr, "Error: %s\n", error.text); // Imprimir el error en caso de que ocurra
+        printf("Error: %s\n", error.text);
+        // igualar variable message_received a variable char jason[]
+        strcpy(jason, message_received);
+        json_obj = json_loads(jason, 0, &error);
         color("Blanco");
-        return 1;
     }
-
+    else
+    {
+        if (strcmp(message_received, jason) != 0)
+        {
+            strcpy(message_received, jason);
+        }
+    }
+    color("Azul");
+    printf("JSON recibido\n"); // Imprimir el JSON recibido
+    color("Blanco");
     const char *nombre = json_string_value(json_object_get(json_obj, "nombre")); // Obtener la cadena con clave "nombre"
     const char *key = json_string_value(json_object_get(json_obj, "key"));       // Obtener la cadena con clave "nombre"
     int total = json_integer_value(json_object_get(json_obj, "total"));          // Obtener el entero con clave "edad"
@@ -244,6 +258,3 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
 
     return 0;
 }
-
-
-

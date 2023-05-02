@@ -97,7 +97,6 @@ int save_sobel_result(cv::Mat sobel, const char *path, const char *client_id, co
         if (file_count < 100)
         {
             char result_name[100];
-
             snprintf(result_name, sizeof(result_name), "%s/%d_%s", path_client_folder, file_count, nombre);
             cv::imwrite(result_name, sobel);
         }

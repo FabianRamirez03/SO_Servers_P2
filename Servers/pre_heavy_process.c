@@ -18,14 +18,14 @@
 #include <sys/stat.h>
 #include "../util/img_processing.h"
 #include "../util/queue.h"
+#include <sys/shm.h>
 
 #define PORT 8081
 #define buffer_size 900000
 #define MAX_BYTES 1024
 
-
-char queue[MAX_QUEUE_SIZE][100000];
-
+//char queue[MAX_QUEUE_SIZE][100000];
+char(*queue)[100000];
 sem_t sem_mutex, sem_tmpImg, sem_contImg; // semaphore variable
 sem_t sem_pid;                            // semaphore variable
 
@@ -36,9 +36,29 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
 void display();
 void *processing(void *arg);
 
-
 int main(int argc, char **argv)
 {
+    key_t key = 1234;
+    int shmid;
+    //char(*queue)[100000];
+
+    
+    // Crear el segmento de memoria compartida
+    shmid = shmget(key, MAX_QUEUE_SIZE * 100000, IPC_CREAT | 0666);
+    if (shmid == -1)
+    {
+        perror("Error en shmget");
+        exit(1);
+    }
+
+    // Adjuntar el segmento de memoria compartida
+    queue  = (char (*)[100000]) shmat(shmid, NULL, 0);
+    if (queue == (void *)-1)
+    {
+        perror("Error en shmat");
+        exit(1);
+    }
+
 
     sem_init(&sem_pid, 0, 1); // Inicializa el semáforo en 1
 
@@ -49,7 +69,6 @@ int main(int argc, char **argv)
     sem_post(&sem_tmpImg);
     sem_post(&sem_contImg);
     sem_post(&sem_pid);
-
 
     int server_fd, new_socket, valread;
     struct sockaddr_in address;
@@ -154,7 +173,6 @@ int main(int argc, char **argv)
         }
         buff[longitud] = '\0';
         enqueue(buff, queue, sem_mutex);
-        printf("PUNTERO %p\n", queue);
 
         // Clear buffer and message received
         memset(buff, 0, sizeof(buff));
@@ -173,10 +191,9 @@ void *processing(void *arg)
     int num_childs = 6;
     // int *pid_queue = init_childs(num_childs, PARENT_PID);
 
-
     for (int i = 0; i < num_childs; i++)
     {
-        
+
         pid_t new_pid = fork();
 
         if (new_pid == -1)
@@ -190,29 +207,29 @@ void *processing(void *arg)
             /*color("Cyan");
             printf("Nuevo heavy proccess creado \n-> Parent ID:%d\n", getppid());
             color("Blanco");*/
-            
+
             while (1)
             {
-                printf("PUNTERO 2 %p\n", queue);
+                printf("PUNTERO 2 %s\n", queue[0]);
                 char *message = dequeue(sem_mutex, queue);
                 display();
                 sleep(2);
-                //display();
-                //printf("ID %d\n", getpid());
+                // display();
+                // printf("ID %d\n", getpid());
                 if (message != NULL)
                 {
                     printf("Processing msg...\n");
 
                     process_new_request(message, sem_tmpImg, sem_contImg);
                 }
+
+                
             }
 
             exit(0);
         }
-
     }
     return NULL;
-
 }
 
 int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg)
