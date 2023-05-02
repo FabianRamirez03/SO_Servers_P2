@@ -18,7 +18,7 @@
 #include <sys/stat.h>
 #include "../util/img_processing.h"
 #include "../util/queue.h"
-
+#include "../util/queue_pid.h"
 
 #define PORT 8081
 #define buffer_size 900000
@@ -37,6 +37,38 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
 
 void display();
 void *processing(void *arg);
+int *init_childs(int num_childs,  pid_t PARENT_ID);
+
+int *init_childs(int num_childs, pid_t PARENT_ID)
+{
+    int pid_queue[MAX_QUEUE_SIZE_PID];
+    
+    if (getpid() == PARENT_ID)
+    {
+        printf("ADIOOOOOS\n");
+        for (int i = 0; i < num_childs; i++)
+        {
+            printf("LLORAMOOOOOS %d\n", i);
+            pid_t new_pid = fork();
+
+            if (new_pid == -1)
+            { // error en la creación del proceso hijo
+                color("Rojo");
+                printf("Error en la creación del proceso hijo\n");
+                color("Blanco");
+            }
+            if (new_pid == 0)
+            {
+                /*color("Cyan");
+                printf("Nuevo heavy proccess creado \n-> Parent ID:%d\n", getppid());
+                color("Blanco");*/
+
+                enqueue_pid(new_pid, pid_queue, sem_pid);
+            }
+        }
+    }
+    return pid_queue;
+}
 
 int main(int argc, char **argv)
 {
@@ -168,38 +200,23 @@ void *processing(void *arg)
     PARENT_PID = getpid();
     sem_post(&sem_pid);
 
+    int num_childs = 6;
+    printf("HOLAAAAAA\n");
+    int *pid_queue = init_childs(num_childs, PARENT_PID);
+
     while (1)
     {
+
         char *message = dequeue(sem_mutex, queue);
         if (message != NULL)
         {
             printf("Processing msg...\n");
 
-            // Creating new child processes.
-            pid_t pid;
-            sem_wait(&sem_pid);
-            pid_t current_pid = getpid();
-            sem_post(&sem_pid);
-            if (current_pid == PARENT_PID)
+            pid_t process_id = dequeue_pid(sem_mutex, pid_queue);
+            if (getpid() == process_id)
             {
-
-                pid = fork(); // creación del proceso hijo
-
-                if (pid == -1)
-                { // error en la creación del proceso hijo
-                    color("Rojo");
-                    printf("Error en la creación del proceso hijo\n");
-                    color("Blanco");
-                }
-                if (pid == 0)
-                {
-                    color("Cyan");
-                    printf("Nuevo heavy proccess creado \n-> Parent ID:%d\n", getppid());
-                    color("Blanco");
-
-                    process_new_request(message, sem_tmpImg, sem_contImg);
-                    exit(0);
-                }
+                process_new_request(message, sem_tmpImg, sem_contImg);
+                enqueue_pid(process_id, pid_queue, sem_pid);
             }
         }
     }
@@ -233,7 +250,7 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
     printf("total: %d\n", total);   // Imprimir el entero con clave "total"
 
     // Guardar el string en un archivo de texto
-    const char *path = "Servers/heavy_db/";
+    const char *path = "Servers/pre_heavy_db/";
     sem_wait(&sem_tmpImg);
     base64_to_image(base64_string, key, path); // Modifico la imagen temporal
     sem_post(&sem_tmpImg);
@@ -244,6 +261,3 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
 
     return 0;
 }
-
-
-

@@ -1,4 +1,4 @@
-all: build_Client build_heavy_process build_fifo threads
+all: build_Client build_heavy_process build_fifo threads build_pre_heavy
 
 build_Client:
 	gcc -c Clients/client.c
@@ -13,6 +13,9 @@ threads:
 
 build_fifo:
 	g++ -o out/FIFO Servers/FIFO.c util/sobel.c `pkg-config --cflags --libs opencv4 jansson` -lssl -lcrypto -std=c++11 -pthread
+
+build_pre_heavy:
+	g++ -o out/pre_heavy Servers/pre_heavy_process.c util/sobel.c `pkg-config --cflags --libs opencv4 jansson` -lssl -lcrypto -std=c++11 -pthread
 
 install_libs:
 	sudo apt-get install libssl-dev
@@ -36,3 +39,8 @@ run_threads:
 	rm -rf ./Servers/threads_db/*
 	mkdir ./Servers/threads_db/tmp/
 	./out/Threads
+
+run_pre_heavy:
+	rm -rf ./Servers/pre_heavy_db/*
+	mkdir ./Servers/pre_heavy_db/tmp/
+	./out/pre_heavy
