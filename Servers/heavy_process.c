@@ -39,11 +39,17 @@ pid_t PARENT_PID;
 
 sem_t sem_data;
 
+int num_children = 0;
+int zombie_children = 1;
+
+
+
 int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg, sem_t sem_data);
 int save_data(double cpu_time_used, int total);
 
 void display();
 void *processing(void *arg);
+void sigchld_handler(int sig);
 
 int main(int argc, char **argv)
 {
@@ -220,7 +226,7 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
 
 	start = clock();
 
-    printf("Incia el procesamiento\n");
+    printf("Inicia el procesamiento\n");
 
     json_error_t error; // Estructura para almacenar errores
 
@@ -260,7 +266,7 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
 
     json_decref(json_obj); // Liberar la memoria utilizada por el objeto JSON
 
-	/*
+	
 	// Almacenamiento de datos
 	end = clock();
 	cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
@@ -268,7 +274,7 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
 	sem_wait(&sem_data);
 	save_data(cpu_time_used, total);
 	sem_post(&sem_data);
-	*/
+	
     return 0;
 }
 
@@ -283,7 +289,7 @@ int save_data(double cpu_time_used, int total){
 	fprintf(csv_file, "%f,%s\n", cpu_time_used, llave);
 	fclose(csv_file);
 	if (requests_processed ==  total){
-		
+		printf("Guarda datos finales\n");
 		FILE *csv_file = fopen("GUI/data/Heavy.csv", "a");
 		if (csv_file == NULL)
 		{
@@ -325,5 +331,4 @@ int save_data(double cpu_time_used, int total){
 	return 0;
 
 }
-
 
