@@ -29,7 +29,7 @@ run_client_threads:
 	./out/client -p 8082 -t 20 -c 2 -i ./images/arbol.png -ip 127.0.0.1 -lz
 
 run_client_heavy:
-	./out/client -p 8083 -t 2 -c 5 -i ./images/arbol.png -ip 127.0.0.1 -lz
+	./out/client -p 8083 -t 2 -c 1 -i ./images/beagle.png -ip 127.0.0.1 -lz
 
 run_fifo:
 	rm -rf ./Servers/FIFO_db/*

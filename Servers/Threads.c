@@ -203,7 +203,6 @@ void * process_new_request(void *msg)
     int total = json_integer_value(json_object_get(json_obj, "total"));          // Obtener el entero con clave "edad"
     const char *base64_string = json_string_value(json_object_get(json_obj, "data"));
 	
-	printf("Llave %s\n", key);
 
     // Guardar el string en un archivo de texto
     const char *path = "Servers/threads_db/";
@@ -213,7 +212,6 @@ void * process_new_request(void *msg)
 	{
 		// llave = key;
 		strcpy(llave, key);
-		printf("Llave global %s\n", llave);
 	}
 
 
@@ -287,7 +285,5 @@ int save_data(double cpu_time_used, int total){
 
 	}
 	return 0;
-
-
 
 }
