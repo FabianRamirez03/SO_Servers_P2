@@ -19,8 +19,14 @@ install_libs:
 	sudo apt-get install libjansson-dev
 	sudo apt-get install libjpeg-dev
 
-run_client:
-	./out/client -p 8081 -t 2 -c 5 -i ./images/arbol.png -ip 218.122.255 -lz
+run_client_fifo:
+	./out/client -p 8081 -t 2 -c 5 -i ./images/arbol.png -ip 127.0.0.1 -lz
+
+run_client_threads:
+	./out/client -p 8082 -t 20 -c 2 -i ./images/arbol.png -ip 127.0.0.1 -lz
+
+run_client_heavy:
+	./out/client -p 8083 -t 2 -c 5 -i ./images/arbol.png -ip 127.0.0.1 -lz
 
 run_fifo:
 	rm -rf ./Servers/FIFO_db/*

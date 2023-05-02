@@ -28,13 +28,15 @@ struct thread_args {
     char* json_str;
     int cycles;
     int port;
+	char * ip;
 };
 
-int new_connection(char * json_str, int port){
+int new_connection(char * json_str, int port, char * ip){
     int sock = 0, valread;
     struct sockaddr_in serv_addr;
     char *hello = "Hello from client";
     char buffer[buffer_size] = {0};
+	printf("Ip; \n", ip);
 
     // Create socket file descriptor
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -50,7 +52,7 @@ int new_connection(char * json_str, int port){
     int json_len = strlen(json_str);
 
     // Convert IP address from text to binary form
-    if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0) {
+    if (inet_pton(AF_INET, ip, &serv_addr.sin_addr) <= 0) {
         printf("\nInvalid address/ Address not supported \n");
         return -1;
     }
@@ -99,10 +101,11 @@ void *send_pkg(void *arg){
     char * json_str = my_args->json_str;
     int cycles = my_args->cycles;
     int port = my_args->port;
+	char * ip = my_args->ip;
 
     for (int i = 0; i < cycles ; i++){
         sem_wait(&semaphore);
-        new_connection(json_str, port);
+        new_connection(json_str, port, ip);
         //sleep(3);
         sem_post(&semaphore);     
     }
@@ -188,6 +191,7 @@ int main(int argc, char *argv[]) {
         args->json_str = json_str;
         args->cycles = cycles;
         args->port = port;
+		args->ip = ip;
 
         pthread_t thread;
         pthread_create(&thread, NULL, send_pkg, args);
@@ -286,19 +290,6 @@ char* image_to_base64(char* image_path) {
     BIO_free_all(bio);
     free(image_buffer);
 
-    // Guardar el string en un archivo de texto
-    char filename[strlen(image_path) + 5];
-    strcpy(filename, image_path);
-    strcat(filename, ".txt");
-
-    FILE* out = fopen(filename, "w");
-    if (!out) {
-        printf("No se pudo abrir el archivo de salida\n");
-        free(base64_string);
-        return NULL;
-    }
-    fprintf(out, "%s", base64_string);
-    fclose(out);
 
     return base64_string;
 }

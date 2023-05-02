@@ -17,7 +17,7 @@
 #include "../util/queue.h"
 #include <sys/resource.h>
 
-#define PORT 8081
+#define PORT 8082
 #define buffer_size 900000
 #define MAX_BYTES 1024
 
