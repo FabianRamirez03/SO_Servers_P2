@@ -188,7 +188,6 @@ void *processing(void *arg)
             color("Cyan");
             printf("Se han procesado todos los mensajes\n");
 
-            sleep(1);
 
             // CSV
             FILE *csv_file = fopen("GUI/data/FIFO.csv", "a");
