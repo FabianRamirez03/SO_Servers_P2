@@ -14,6 +14,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <sys/resource.h>
+#include <sys/sysinfo.h>
 #include "../util/tools.h"
 #include "../util/img_processing.h"
 #include "../util/queue.h"
@@ -158,8 +159,7 @@ void *processing(void *arg)
     double cpu_time_used;
     int i;
     int restart = 0;
-    long int vol_anterior = 0;
-    long int invol_anterior = 0;
+    long double cpu_anterior = 0;
 
     FILE *csv_file = fopen("GUI/data/FIFO_single.csv", "a");
     if (csv_file == NULL)
@@ -179,7 +179,7 @@ void *processing(void *arg)
             process_new_request(message, sem_tmpImg, sem_contImg);
             end = clock();
             cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
-            fprintf(csv_file, "%f, %s\n",cpu_time_used, llave);
+            fprintf(csv_file, "%f, %s\n", cpu_time_used, llave);
             printf("%d: time %f Key: %s\n", i, cpu_time_used, llave);
         }
         if (i == total && total != 0)
@@ -187,7 +187,7 @@ void *processing(void *arg)
             fclose(csv_file);
             color("Cyan");
             printf("Se han procesado todos los mensajes\n");
-        
+
             sleep(1);
 
             // CSV
@@ -201,7 +201,8 @@ void *processing(void *arg)
             struct rusage usage;
 
             // Obtener el uso de recursos del proceso actual
-            if (getrusage(RUSAGE_SELF, &usage) != 0) {
+            if (getrusage(RUSAGE_SELF, &usage) != 0)
+            {
                 printf("Error al obtener el uso de recursos\n");
                 return NULL;
             }
@@ -209,24 +210,22 @@ void *processing(void *arg)
             // Imprimir la cantidad de memoria utilizada en KB
             printf("Memoria utilizada: %ld KB\n", usage.ru_maxrss);
 
-            // Obtiene el numero de cambios de contexto voluntarios e involuntarios
-            long int vol = usage.ru_idrss- vol_anterior;
-            
-            printf("Tamaño de datos no compartidos: %ld\n", vol);
-            vol_anterior = usage.ru_idrss;
+            // Imprimir el tiempo de CPU utilizado en segundos y guardarlo en una variable
+            long double tiempo_cpu = (long double)usage.ru_stime.tv_sec + ((long double)usage.ru_stime.tv_usec / 1000000.0) - cpu_anterior;
+            printf("Tiempo de CPU utilizado: %Lfsegundos\n", tiempo_cpu);
+            printf("Tiempo de CPU del sistema utilizado: %ld.%06ld segundos\n", usage.ru_stime.tv_sec, usage.ru_stime.tv_usec);
+            cpu_anterior = (long double)usage.ru_stime.tv_sec + ((long double)usage.ru_stime.tv_usec / 1000000.0);
 
-            color("Blanco");
 
             char memory[20];
 
             sprintf(memory, "%ld", usage.ru_maxrss);
 
-            fprintf(csv_file, "%s, %ld, %d\n", memory, vol, total);
+            fprintf(csv_file, "%s, %Lf, %d\n", memory, tiempo_cpu, total);
             fclose(csv_file);
 
             restart = 1;
             total = 0;
-
 
         }
         if (restart == 1)
@@ -274,7 +273,7 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
 
     const char *path = "Servers/FIFO_db/";
 
-    //compare key with llave
+    // compare key with llave
     if (strcmp(key, llave) != 0)
     {
         // llave = key;

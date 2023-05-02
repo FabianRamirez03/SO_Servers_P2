@@ -3,6 +3,7 @@ out/
 
 .vscode/
 Servers/FIFO_db/*
+Servers/threads_db/
 Servers/Threads_db/
 
 Servers/heavy_db/
