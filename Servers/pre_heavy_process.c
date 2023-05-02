@@ -13,37 +13,42 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include "../util/tools.h"
+#include <signal.h> // Incluir la biblioteca de señales
+#include <sys/wait.h>
+#include <sys/stat.h>
 #include "../util/img_processing.h"
 #include "../util/queue.h"
-#include <sys/resource.h>
 
-#define PORT 8082
+#define PORT 8081
 #define buffer_size 900000
 #define MAX_BYTES 1024
 
 
 char queue[MAX_QUEUE_SIZE][100000];
 
-sem_t sem_mutex, sem_tmpImg, sem_contImg, sem_data; // semaphore variable
+sem_t sem_mutex, sem_tmpImg, sem_contImg; // semaphore variable
+sem_t sem_pid;                            // semaphore variable
 
-int requests_processed = 0;
-long double cpu_anterior = 0;
-char llave[MAX_BYTES];
+pid_t PARENT_PID;
 
-void* process_new_request(void *message_received);
+int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg);
 
+void display();
 void *processing(void *arg);
 
-int save_data(double cpu_time_used, int total);
 
 int main(int argc, char **argv)
 {
+
+    sem_init(&sem_pid, 0, 1); // Inicializa el semáforo en 1
+
     pthread_t thread_id;
     pthread_create(&thread_id, NULL, processing, NULL);
+
     sem_post(&sem_mutex);
     sem_post(&sem_tmpImg);
     sem_post(&sem_contImg);
-	sem_post(&sem_data);
+    sem_post(&sem_pid);
 
 
     int server_fd, new_socket, valread;
@@ -53,8 +58,8 @@ int main(int argc, char **argv)
     char buffer[buffer_size] = {0};
     char message_rec[buffer_size] = {0};
     message_rec[sizeof(message_rec) - 1] = '\0';
+    const char *hello = "Hello from server";
     int total_bytes_processed = 0;
-	
 
     // Create socket file descriptor
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
@@ -149,40 +154,70 @@ int main(int argc, char **argv)
         }
         buff[longitud] = '\0';
         enqueue(buff, queue, sem_mutex);
+        printf("PUNTERO %p\n", queue);
 
-        // Clear buffer
+        // Clear buffer and message received
         memset(buff, 0, sizeof(buff));
     }
 
     pthread_join(thread_id, NULL);
     return 0;
 }
-
 void *processing(void *arg)
 {
-    while (1)
+    // Obtener el ID del proceso padre al inicio de la ejecución
+    sem_wait(&sem_pid);
+    PARENT_PID = getpid();
+    sem_post(&sem_pid);
+
+    int num_childs = 6;
+    // int *pid_queue = init_childs(num_childs, PARENT_PID);
+
+
+    for (int i = 0; i < num_childs; i++)
     {
-        char *message = dequeue(sem_mutex, queue);
-        if (message != NULL)
-        {
-            //call processing function in a new thread
-            pthread_t thread_id;
-            pthread_create(&thread_id, NULL, process_new_request, message);
+        
+        pid_t new_pid = fork();
+
+        if (new_pid == -1)
+        { // error en la creación del proceso hijo
+            color("Rojo");
+            printf("Error en la creación del proceso hijo\n");
+            color("Blanco");
         }
+        else if (new_pid == 0)
+        {
+            /*color("Cyan");
+            printf("Nuevo heavy proccess creado \n-> Parent ID:%d\n", getppid());
+            color("Blanco");*/
+            
+            while (1)
+            {
+                printf("PUNTERO 2 %p\n", queue);
+                char *message = dequeue(sem_mutex, queue);
+                display();
+                sleep(2);
+                //display();
+                //printf("ID %d\n", getpid());
+                if (message != NULL)
+                {
+                    printf("Processing msg...\n");
+
+                    process_new_request(message, sem_tmpImg, sem_contImg);
+                }
+            }
+
+            exit(0);
+        }
+
     }
-    return 0;
+    return NULL;
+
 }
 
-void * process_new_request(void *msg)
+int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg)
 {
-	clock_t start, end;
-	double cpu_time_used;
-
-	start = clock();
-
-    printf("Inicia el procesamiento\n");
-    
-    char * message_received = (char *)msg;
+    printf("Incia el procesamiento\n");
 
     json_error_t error; // Estructura para almacenar errores
 
@@ -193,99 +228,29 @@ void * process_new_request(void *msg)
     if (json_obj == NULL)
     {
         color("Rojo");
-        printf( "Error: %s\n", error.text); // Imprimir el error en caso de que ocurra
+        fprintf(stderr, "Error: %s\n", error.text); // Imprimir el error en caso de que ocurra
         color("Blanco");
-        return NULL;
+        return 1;
     }
 
     const char *nombre = json_string_value(json_object_get(json_obj, "nombre")); // Obtener la cadena con clave "nombre"
     const char *key = json_string_value(json_object_get(json_obj, "key"));       // Obtener la cadena con clave "nombre"
     int total = json_integer_value(json_object_get(json_obj, "total"));          // Obtener el entero con clave "edad"
     const char *base64_string = json_string_value(json_object_get(json_obj, "data"));
-	
-	printf("Llave %s\n", key);
+
+    printf("Nombre: %s\n", nombre); // Imprimir la cadena con clave "nombre"
+    printf("Key: %s\n", key);       // Imprimir la cadena con clave "key"
+    printf("total: %d\n", total);   // Imprimir el entero con clave "total"
 
     // Guardar el string en un archivo de texto
-    const char *path = "Servers/threads_db/";
-
-	// compare key with llave
-	if (strcmp(key, llave) != 0)
-	{
-		// llave = key;
-		strcpy(llave, key);
-		printf("Llave global %s\n", llave);
-	}
-
-
+    const char *path = "Servers/pre_heavy_db/";
     sem_wait(&sem_tmpImg);
-    base64_to_image(base64_string,key,  path); // Modifico la imagen temporal
+    base64_to_image(base64_string, key, path); // Modifico la imagen temporal
     sem_post(&sem_tmpImg);
 
-    //const char *path = "Servers/Threads_db/";
     sobel_filter(nombre, path, sem_contImg, key);
 
     json_decref(json_obj); // Liberar la memoria utilizada por el objeto JSON
 
-	end = clock();
-	cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
-
-	sem_wait(&sem_data);
-	save_data(cpu_time_used, total);
-	sem_post(&sem_data);
-
     return 0;
-}
-
-int save_data(double cpu_time_used, int total){
-	requests_processed ++;
-	FILE *csv_file = fopen("GUI/data/Threads_single.csv", "a");
-	if (csv_file == NULL)
-    {
-        printf("Error al abrir el archivo\n");
-        return 1;
-    }
-	fprintf(csv_file, "%f,%s\n", cpu_time_used, llave);
-	fclose(csv_file);
-	if (requests_processed ==  total){
-		
-		FILE *csv_file = fopen("GUI/data/Threads.csv", "a");
-		if (csv_file == NULL)
-		{
-		    printf("Error al abrir el archivo\n");
-		    return NULL;
-		}
-
-		color("Cyan");
-        printf("Se han procesado todos los mensajes\n");
-
-		struct rusage usage;
-
-		// Obtener el uso de recursos del proceso actual
-		if (getrusage(RUSAGE_SELF, &usage) != 0)
-		{
-			printf("Error al obtener el uso de recursos\n");
-			return NULL;
-		}
-
-		// Imprimir la cantidad de memoria utilizada en KB
-		printf("Memoria utilizada: %ld KB\n", usage.ru_maxrss);
-
-		// Imprimir el tiempo de CPU utilizado en segundos y guardarlo en una variable
-		long double tiempo_cpu = (long double)usage.ru_stime.tv_sec + ((long double)usage.ru_stime.tv_usec / 1000000.0) - cpu_anterior;
-		printf("Tiempo de CPU utilizado: %Lfsegundos\n", tiempo_cpu);
-		printf("Tiempo de CPU del sistema utilizado: %ld.%06ld segundos\n", usage.ru_stime.tv_sec, usage.ru_stime.tv_usec);
-		cpu_anterior = (long double)usage.ru_stime.tv_sec + ((long double)usage.ru_stime.tv_usec / 1000000.0);
-
-		char memory[20];
-
-		sprintf(memory, "%ld", usage.ru_maxrss);
-
-		fprintf(csv_file, "%s,%Lf,%d\n", memory, tiempo_cpu, total);
-		fclose(csv_file);
-		requests_processed = 0;
-
-	}
-
-
-
 }

@@ -41,11 +41,12 @@ char *create_client_directory(const char *path, const char *client_ID)
     strcpy(new_directory_path, path);
     strcat(new_directory_path, client_ID);
     DIR *dir = opendir(new_directory_path);
+    char *result;
     if (dir)
     {
         closedir(dir);
 
-        char *result = (char *)malloc(strlen(new_directory_path) + 1);
+        result = (char *)malloc(strlen(new_directory_path) + 1);
         strcpy(result, new_directory_path);
         return result;
     }
@@ -60,7 +61,7 @@ char *create_client_directory(const char *path, const char *client_ID)
         strcpy(result, new_directory_path);
         return result;
     }
-    return "";
+    return result;
 }
 
 int save_sobel_result(cv::Mat sobel, const char *path, const char *client_id, const char *nombre)
@@ -105,4 +106,5 @@ int save_sobel_result(cv::Mat sobel, const char *path, const char *client_id, co
             printf("Se llegó al limite de los 100 archivos.\n");
         }
     }
+    return 0;
 }

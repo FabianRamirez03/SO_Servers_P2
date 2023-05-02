@@ -176,7 +176,6 @@ void *processing(void *arg)
             printf("Processing msg...\n");
 
             // Creating new child processes.
-            int i, n = 3;
             pid_t pid;
             sem_wait(&sem_pid);
             pid_t current_pid = getpid();
