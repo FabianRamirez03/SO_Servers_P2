@@ -233,7 +233,7 @@ void *processing(void *arg)
             printf("Reiniciando...\n");
             i = 0;
             restart = 0;
-            csv_file = fopen("Servers/FIFO_db/FIFO.csv", "a");
+            csv_file = fopen("GUI/data/FIFO_single.csv", "a");
             if (csv_file == NULL)
             {
                 printf("Error al abrir el archivo\n");
