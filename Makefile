@@ -36,3 +36,6 @@ run_threads:
 	rm -rf ./Servers/threads_db/*
 	mkdir ./Servers/threads_db/tmp/
 	./out/Threads
+
+run_visualizer:
+	python3 GUI/main.py

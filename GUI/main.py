@@ -26,67 +26,83 @@ def close_app():
 def update_graphs():
     update_avg_execution_time_plot()
     update_execution_time_plot()
+    update_memory_plot()
+    update_cpu_plot()
     main.after(5000, update_graphs)
 
 def update_execution_time_plot():
-    global execution_time_frame
-    # Leer los archivos csv
-    df_fifo = pd.read_csv('GUI/dummyData/FIFO.csv')
-    df_heavy = pd.read_csv('GUI/dummyData/Heavy.csv')
-    df_hilos = pd.read_csv('GUI/dummyData/hilos.csv')
-    df_preheavy = pd.read_csv('GUI/dummyData/PreHeavy.csv')
+	global execution_time_frame
+	# Leer los archivos csv
+	df_fifo = pd.read_csv('GUI/data/FIFO_single.csv')
+	#df_heavy = pd.read_csv('GUI/dummyData/Heavy.csv')
+	#df_hilos = pd.read_csv('GUI/dummyData/hilos.csv')
+	#df_preheavy = pd.read_csv('GUI/dummyData/PreHeavy.csv')
 
-    # Crear la figura y los subplots
-    fig, ax = plt.subplots()
 
-    # Agregar las series al gráfico
-    ax.scatter(df_fifo['CantidadSolicitudes'], df_fifo['tiempoEjecucion'], label='FIFO')
-    ax.scatter(df_heavy['CantidadSolicitudes'], df_heavy['tiempoEjecucion'], label='Heavy')
-    ax.scatter(df_hilos['CantidadSolicitudes'], df_hilos['tiempoEjecucion'], label='hilos')
-    ax.scatter(df_preheavy['CantidadSolicitudes'], df_preheavy['tiempoEjecucion'], label='PreHeavy')
+	# Agrupar los datos por la variable 'Key'
+	grouped_data = df_fifo.groupby('Key')
 
-    # Configurar el gráfico
-    ax.set_xlabel('Cantidad de Solicitudes')
-    ax.set_ylabel('Tiempo de Ejecución')
-    ax.set_title('Tiempo de Ejecución - Cantidad de Solicitudes')
-    ax.legend()
-
-    # Crear la figura en el canvas de tkinter
-    if hasattr(execution_time_frame, 'canvas'):
-        execution_time_frame.canvas.get_tk_widget().pack_forget()
-        execution_time_frame.canvas = None
-    fig_canvas = FigureCanvasTkAgg(fig, master=execution_time_frame)
-    fig_canvas.draw()
-    fig_canvas.get_tk_widget().place(x=0, y=0, width=390, height=390)
-    execution_time_frame.canvas = fig_canvas
-    return
-
-def update_avg_execution_time_plot():
-	global average_time_frame
-	df_fifo = pd.read_csv('GUI/dummyData/FIFO.csv')
-	df_heavy = pd.read_csv('GUI/dummyData/Heavy.csv')
-	df_hilos = pd.read_csv('GUI/dummyData/hilos.csv')
-	df_preheavy = pd.read_csv('GUI/dummyData/PreHeavy.csv')
-
-	# Calcular los tiempos promedio de cada cantidad de solicitudes
-	df_fifo_avg = df_fifo.groupby('CantidadSolicitudes')['tiempoEjecucion'].mean().reset_index()
-	df_heavy_avg = df_heavy.groupby('CantidadSolicitudes')['tiempoEjecucion'].mean().reset_index()
-	df_hilos_avg = df_hilos.groupby('CantidadSolicitudes')['tiempoEjecucion'].mean().reset_index()
-	df_preheavy_avg = df_preheavy.groupby('CantidadSolicitudes')['tiempoEjecucion'].mean().reset_index()
+	# Obtener la cantidad de solicitudes y el tiempo de ejecución total por cada valor de 'Key'
+	fifo_requests_count = grouped_data['Key'].count()
+	fifo_total_runtime = grouped_data['Time'].sum()
 
 	# Crear la figura y los subplots
 	fig, ax = plt.subplots()
 
 	# Agregar las series al gráfico
-	ax.plot(df_fifo_avg['CantidadSolicitudes'], df_fifo_avg['tiempoEjecucion'], label='FIFO')
-	ax.plot(df_heavy_avg['CantidadSolicitudes'], df_heavy_avg['tiempoEjecucion'], label='Heavy')
-	ax.plot(df_hilos_avg['CantidadSolicitudes'], df_hilos_avg['tiempoEjecucion'], label='hilos')
-	ax.plot(df_preheavy_avg['CantidadSolicitudes'], df_preheavy_avg['tiempoEjecucion'], label='PreHeavy')
+	ax.scatter(fifo_requests_count, fifo_total_runtime, label='FIFO')
+	#ax.scatter(df_heavy['CantidadSolicitudes'], df_heavy['tiempoEjecucion'], label='Heavy')
+	#ax.scatter(df_hilos['CantidadSolicitudes'], df_hilos['tiempoEjecucion'], label='hilos')
+	#ax.scatter(df_preheavy['CantidadSolicitudes'], df_preheavy['tiempoEjecucion'], label='PreHeavy')
+
+	# Configurar el gráfico
+	ax.set_xlabel('Cantidad de Solicitudes')
+	ax.set_ylabel('Tiempo de Ejecución')
+	ax.set_title('Tiempo de Ejecución (segundos)')
+	ax.legend()
+
+	# Crear la figura en el canvas de tkinter
+	if hasattr(execution_time_frame, 'canvas'):
+		execution_time_frame.canvas.get_tk_widget().pack_forget()
+		execution_time_frame.canvas = None
+	fig_canvas = FigureCanvasTkAgg(fig, master=execution_time_frame)
+	fig_canvas.draw()
+	fig_canvas.get_tk_widget().place(x=20, y=0, width=390, height=390)
+	execution_time_frame.canvas = fig_canvas
+	# Cerrar la figura explícitamente
+	plt.close(fig)
+	return
+
+def update_avg_execution_time_plot():
+	global average_time_frame
+	df_fifo = pd.read_csv('GUI/data/FIFO_single.csv')
+	#df_heavy = pd.read_csv('GUI/dummyData/Heavy.csv')
+	#df_hilos = pd.read_csv('GUI/dummyData/hilos.csv')
+	#df_preheavy = pd.read_csv('GUI/dummyData/PreHeavy.csv')
+
+	# Agrupar los datos por la variable 'Key'
+	fifo_grouped_data = df_fifo.groupby('Key')
+
+	# Obtener la cantidad de solicitudes y el tiempo de ejecución total por cada valor de 'Key'
+	fifo_requests_count = fifo_grouped_data['Key'].count()
+	fifo_total_runtime = fifo_grouped_data['Time'].sum()
+
+	# Calcular el promedio de tiempo de ejecución por cantidad de solicitudes
+	fifo_mean_runtime = fifo_total_runtime / fifo_requests_count
+
+	# Crear la figura y los subplots
+	fig, ax = plt.subplots()
+
+	# Agregar las series al gráfico
+	ax.scatter(fifo_requests_count, fifo_mean_runtime, label='FIFO')
+	#ax.plot(df_heavy_avg['CantidadSolicitudes'], df_heavy_avg['tiempoEjecucion'], label='Heavy')
+	#ax.plot(df_hilos_avg['CantidadSolicitudes'], df_hilos_avg['tiempoEjecucion'], label='hilos')
+	#ax.plot(df_preheavy_avg['CantidadSolicitudes'], df_preheavy_avg['tiempoEjecucion'], label='PreHeavy')
 
 	# Configurar el gráfico
 	ax.set_xlabel('Cantidad de Solicitudes')
 	ax.set_ylabel('Tiempo Promedio de Ejecución')
-	ax.set_title('Tiempo Promedio de Ejecución - Cantidad de Solicitudes')
+	ax.set_title('Tiempo Promedio de Ejecución (segundos)')
 	ax.legend()
 
 	# Crear la figura en el canvas de tkinter
@@ -95,29 +111,32 @@ def update_avg_execution_time_plot():
 		average_time_frame.canvas = None
 	fig_canvas = FigureCanvasTkAgg(fig, master=average_time_frame)
 	fig_canvas.draw()
-	fig_canvas.get_tk_widget().place(x=0, y=0, width=390, height=390)
+	fig_canvas.get_tk_widget().place(x=0, y=0, width=430, height=390)
 	average_time_frame.canvas = fig_canvas
+
+	# Cerrar la figura explícitamente
+	plt.close(fig)
         
 def update_memory_plot():
 	global memory_frame
-	df_fifo = pd.read_csv('GUI/dummyData/FIFO.csv')
-	df_heavy = pd.read_csv('GUI/dummyData/Heavy.csv')
-	df_hilos = pd.read_csv('GUI/dummyData/hilos.csv')
-	df_preheavy = pd.read_csv('GUI/dummyData/PreHeavy.csv')
+	df_fifo = pd.read_csv('GUI/data/FIFO.csv')
+	#df_heavy = pd.read_csv('GUI/dummyData/Heavy.csv')
+	#df_hilos = pd.read_csv('GUI/dummyData/hilos.csv')
+	#df_preheavy = pd.read_csv('GUI/dummyData/PreHeavy.csv')
 
 	# Crear la figura y los subplots
 	fig, ax = plt.subplots()
 
 	# Agregar las series al gráfico
-	ax.scatter(df_fifo['CantidadSolicitudes'], df_fifo['memoriaUtilizada'], label='FIFO')
-	ax.scatter(df_heavy['CantidadSolicitudes'], df_heavy['memoriaUtilizada'], label='Heavy')
-	ax.scatter(df_hilos['CantidadSolicitudes'], df_hilos['memoriaUtilizada'], label='hilos')
-	ax.scatter(df_preheavy['CantidadSolicitudes'], df_preheavy['memoriaUtilizada'], label='PreHeavy')
+	ax.scatter(df_fifo['Total'], df_fifo['Memory'], label='FIFO')
+	#ax.scatter(df_heavy['CantidadSolicitudes'], df_heavy['memoriaUtilizada'], label='Heavy')
+	#ax.scatter(df_hilos['CantidadSolicitudes'], df_hilos['memoriaUtilizada'], label='hilos')
+	#ax.scatter(df_preheavy['CantidadSolicitudes'], df_preheavy['memoriaUtilizada'], label='PreHeavy')
 
 	# Configurar el gráfico
 	ax.set_xlabel('Cantidad de Solicitudes')
 	ax.set_ylabel('Memoria')
-	ax.set_title('Tiempo de Ejecución - memoria')
+	ax.set_title('Memoria utilizada (bytes)')
 	ax.legend()
 
 	# Crear la figura en el canvas de tkinter
@@ -126,9 +145,45 @@ def update_memory_plot():
 		memory_frame.canvas = None
 	fig_canvas = FigureCanvasTkAgg(fig, master=memory_frame)
 	fig_canvas.draw()
-	fig_canvas.get_tk_widget().place(x=0, y=0, width=390, height=390)
+	fig_canvas.get_tk_widget().place(x=20, y=0, width=410, height=390)
 	memory_frame.canvas = fig_canvas
+	# Cerrar la figura explícitamente
+	plt.close(fig)
 
+
+def update_cpu_plot():
+	global custom_frame
+	df_fifo = pd.read_csv('GUI/data/FIFO.csv')
+	#df_heavy = pd.read_csv('GUI/dummyData/Heavy.csv')
+	#df_hilos = pd.read_csv('GUI/dummyData/hilos.csv')
+	#df_preheavy = pd.read_csv('GUI/dummyData/PreHeavy.csv')
+
+	# Crear la figura y los subplots
+	fig, ax = plt.subplots()
+
+	# Agregar las series al gráfico
+	ax.scatter(df_fifo['Total'], df_fifo['CPU'], label='FIFO')
+	#ax.scatter(df_heavy['CantidadSolicitudes'], df_heavy['memoriaUtilizada'], label='Heavy')
+	#ax.scatter(df_hilos['CantidadSolicitudes'], df_hilos['memoriaUtilizada'], label='hilos')
+	#ax.scatter(df_preheavy['CantidadSolicitudes'], df_preheavy['memoriaUtilizada'], label='PreHeavy')
+
+	# Configurar el gráfico
+	ax.set_xlabel('Cantidad de Solicitudes')
+	ax.set_ylabel('CPU')
+	ax.set_title('Tiempo de uso del CPU (segundos)')
+	ax.legend()
+
+	# Crear la figura en el canvas de tkinter
+	if hasattr(custom_frame, 'canvas'):
+		custom_frame.canvas.get_tk_widget().pack_forget()
+		custom_frame.canvas = None
+	fig_canvas = FigureCanvasTkAgg(fig, master=custom_frame)
+	fig_canvas.draw()
+	fig_canvas.get_tk_widget().place(x=10, y=0, width=420, height=390)
+	custom_frame.canvas = fig_canvas
+
+	# Cerrar la figura explícitamente
+	plt.close(fig)
 
 # Main widget settings ---------------------------------------------------------
 
@@ -164,9 +219,10 @@ title_label = tk.Label(header_frame, text='Evaluador de servidores con diferente
 title_label.place(x=15, y=30)
 
 # Graphics
+update_graphs()
 
-update_execution_time_plot()
-update_avg_execution_time_plot()
+#update_execution_time_plot()
+#update_avg_execution_time_plot()
 update_memory_plot()
 
 
