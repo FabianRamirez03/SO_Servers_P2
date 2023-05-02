@@ -106,4 +106,5 @@ int save_sobel_result(cv::Mat sobel, const char *path, const char *client_id, co
             printf("Se llegó al limite de los 100 archivos.\n");
         }
     }
+    return 0;
 }

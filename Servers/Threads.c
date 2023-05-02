@@ -45,7 +45,6 @@ int main(int argc, char **argv)
     char buffer[buffer_size] = {0};
     char message_rec[buffer_size] = {0};
     message_rec[sizeof(message_rec) - 1] = '\0';
-    char *hello = "Hello from server";
     int total_bytes_processed = 0;
 
     // Create socket file descriptor
