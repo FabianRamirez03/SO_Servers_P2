@@ -24,4 +24,4 @@ run_fifo:
 	./out/FIFO
 
 run_heavy_process:
-	*/out/heavy_process
+	./out/heavy_process

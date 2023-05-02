@@ -13,6 +13,8 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include "../util/tools.h"
+#include <signal.h> // Incluir la biblioteca de señales
+#include <sys/wait.h>
 
 #define PORT 8081
 #define buffer_size 900000
@@ -24,6 +26,9 @@ char queue[MAX_QUEUE_SIZE][100000];
 int front = -1;
 int rear = -1;
 sem_t sem_mutex; // semaphore variable
+sem_t sem_pid;   // semaphore variable
+
+pid_t PARENT_PID;
 
 int process_new_request(char *message_received);
 void enqueue(char *value);
@@ -34,6 +39,9 @@ int base64_to_image(const char *base64_string);
 
 int main(int argc, char **argv)
 {
+
+    sem_init(&sem_pid, 0, 1); // Inicializa el semáforo en 1
+
     pthread_t thread_id;
     pthread_create(&thread_id, NULL, processing, NULL);
     sem_post(&sem_mutex);
@@ -149,30 +157,49 @@ int main(int argc, char **argv)
     pthread_join(thread_id, NULL);
     return 0;
 }
-
 void *processing(void *arg)
 {
+    // Obtener el ID del proceso padre al inicio de la ejecución
+    sem_wait(&sem_pid);
+    PARENT_PID = getpid();
+    sem_post(&sem_pid);
+
+
     while (1)
     {
         char *message = dequeue();
         if (message != NULL)
         {
-            printf("Processing msg...");
-            
-            //Creating new child processes.
+            printf("Processing msg...\n");
+
+            // Creating new child processes.
             int i, n = 3;
             pid_t pid;
+            sem_wait(&sem_pid);
+            pid_t current_pid = getpid();
+            sem_post(&sem_pid);
+            if (current_pid == PARENT_PID)
+            {
 
-            pid = fork(); // creación del proceso hijo
+                pid = fork(); // creación del proceso hijo
 
-            if (pid == -1) { // error en la creación del proceso hijo
-                color("Rojo");
-                printf("Error en la creación del proceso hijo\n");
-                color("Blanco");
-            } else {
-                process_new_request(message);
+                if (pid == -1)
+                { // error en la creación del proceso hijo
+                    color("Rojo");
+                    printf("Error en la creación del proceso hijo\n");
+                    color("Blanco");
+                }
+                if (pid == 0)
+                {
+                    color("Cyan");
+                    printf("Nuevo heavy proccess creado \n-> Parent ID:%d\n", getppid());
+                    color("Blanco");
+
+                    exit(0);
+                } 
+
             }
-            
+
         }
     }
 }
