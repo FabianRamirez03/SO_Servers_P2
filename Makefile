@@ -15,7 +15,7 @@ build_fifo:
 	g++ -o out/FIFO Servers/FIFO.c util/sobel.c `pkg-config --cflags --libs opencv4 jansson` -lssl -lcrypto -std=c++11 -pthread
 
 build_pre_heavy:
-	g++ -o out/pre_heavy Servers/pre_heavy_process.c util/sobel.c `pkg-config --cflags --libs opencv4 jansson` -lssl -lcrypto -std=c++11 -pthread
+	g++ -o out/pre_heavy Servers/pre_heavy_process.c util/sobel.c `pkg-config --cflags --libs opencv4 jansson` -lssl -lcrypto -std=c++11 -pthread -lrt
 
 install_libs:
 	sudo apt-get install libssl-dev
@@ -29,7 +29,7 @@ run_client_threads:
 	./out/client -p 8082 -t 20 -c 2 -i ./images/arbol.png -ip 127.0.0.1 -lz
 
 run_client_heavy:
-	./out/client -p 8083 -t 2 -c 2 -i ./images/beagle.jpg -ip 127.0.0.1 -lz
+	./out/client -p 8083 -t 5 -c 5 -i ./images/beagle.jpg -ip 127.0.0.1 -lz
 
 run_fifo:
 	rm -rf ./Servers/FIFO_db/*

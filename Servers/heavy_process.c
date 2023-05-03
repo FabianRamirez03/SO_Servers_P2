@@ -192,7 +192,7 @@ void *processing(void *arg)
         sem_post(&sem_pid);
         if (current_pid == PARENT_PID)
         {
-            // sleep(1);
+            //sleep(0.6);
             sem_wait(&sem_pid);
             char *message = dequeue(sem_mutex, queue);
             sem_post(&sem_pid);

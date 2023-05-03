@@ -12,6 +12,13 @@
 #include <openssl/bio.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <sys/mman.h> // para mmap(), munmap()
+#include <fcntl.h>    // para O_CREAT, O_RDWR
+#include <unistd.h>   // para ftruncate()
+#include <stdlib.h>   // para exit()
+#include <stdio.h>    // para printf()
+#include <string.h>   // para strcmp()
+#include <semaphore.h>// para sem_init(), sem_wait(), sem_post()
 #include "../util/tools.h"
 #include <signal.h> // Incluir la biblioteca de señales
 #include <sys/wait.h>
@@ -25,9 +32,9 @@
 #define MAX_BYTES 1024
 
 //char queue[MAX_QUEUE_SIZE][100000];
-char(*queue)[100000];
+//char(*queue)[100000];
 sem_t sem_mutex, sem_tmpImg, sem_contImg; // semaphore variable
-sem_t sem_pid;                            // semaphore variable
+sem_t sem_pid, sem_data;                            // semaphore variable
 
 pid_t PARENT_PID;
 
@@ -36,28 +43,25 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
 void display();
 void *processing(void *arg);
 
+
+#define QUEUE_SIZE 100 // tamaño máximo de la cola
+
+typedef struct {
+    char messages[QUEUE_SIZE][1000000];
+    int head;
+    int tail;
+} queue_t;
+
+char *dequeue_pre(queue_t *queue) ;
+void enqueue_pre(queue_t *queue, const char *message);
+queue_t *queue;
+
+
 int main(int argc, char **argv)
 {
     key_t key = 1234;
     int shmid;
     //char(*queue)[100000];
-
-    
-    // Crear el segmento de memoria compartida
-    shmid = shmget(key, MAX_QUEUE_SIZE * 100000, IPC_CREAT | 0666);
-    if (shmid == -1)
-    {
-        perror("Error en shmget");
-        exit(1);
-    }
-
-    // Adjuntar el segmento de memoria compartida
-    queue  = (char (*)[100000]) shmat(shmid, NULL, 0);
-    if (queue == (void *)-1)
-    {
-        perror("Error en shmat");
-        exit(1);
-    }
 
 
     sem_init(&sem_pid, 0, 1); // Inicializa el semáforo en 1
@@ -69,6 +73,7 @@ int main(int argc, char **argv)
     sem_post(&sem_tmpImg);
     sem_post(&sem_contImg);
     sem_post(&sem_pid);
+    sem_post(&sem_data);
 
     int server_fd, new_socket, valread;
     struct sockaddr_in address;
@@ -172,7 +177,7 @@ int main(int argc, char **argv)
             }
         }
         buff[longitud] = '\0';
-        enqueue(buff, queue, sem_mutex);
+        enqueue_pre(queue, buff);
 
         // Clear buffer and message received
         memset(buff, 0, sizeof(buff));
@@ -183,53 +188,115 @@ int main(int argc, char **argv)
 }
 void *processing(void *arg)
 {
+    // Crear la memoria compartida para el queue
+    int fd = shm_open("/myqueue", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+    if (fd == -1) {
+        perror("shm_open");
+        exit(1);
+    }
+    if (ftruncate(fd, sizeof(queue_t)) == -1) {
+        perror("ftruncate");
+        exit(1);
+    }
+    queue = (queue_t*) mmap(NULL, sizeof(queue_t), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (queue == MAP_FAILED) {
+        perror("mmap");
+        exit(1);
+    }
+    close(fd);
+
+    // Inicializar el semáforo para el queue
+    sem_t *sem_queue;
+    sem_queue = sem_open("/mysemaphore", O_CREAT, S_IRUSR | S_IWUSR, 1);
+    if (sem_queue == SEM_FAILED) {
+        perror("sem_open");
+        exit(1);
+    }
+
     // Obtener el ID del proceso padre al inicio de la ejecución
-    sem_wait(&sem_pid);
-    PARENT_PID = getpid();
-    sem_post(&sem_pid);
+    pid_t parent_pid;
+    sem_t *sem_pid;
+    sem_pid = sem_open("/mypid", O_CREAT, S_IRUSR | S_IWUSR, 1);
+    sem_wait(sem_pid);
+    parent_pid = getpid();
+    sem_post(sem_pid);
 
-    int num_childs = 6;
-    // int *pid_queue = init_childs(num_childs, PARENT_PID);
+    // Crear los 6 procesos hijos
+    pid_t pid[6];
+    for (int i = 0; i < 6; i++) {
+        pid[i] = fork();
+        if (pid[i] == -1) {
+            perror("fork");
+            exit(1);
+        } else if (pid[i] == 0) {
+            // Proceso hijo
+            while (1) {
+                // Leer un mensaje del queue
+                sem_wait(sem_queue);
+                if (queue->head != queue->tail) {
+                    //char *message = queue->messages[queue->tail];
+                    //queue->tail = (queue->tail + 1) % QUEUE_SIZE;
+                    char * message = dequeue_pre(queue);
+                    
+                    sem_post(sem_queue);
 
-    for (int i = 0; i < num_childs; i++)
-    {
-
-        pid_t new_pid = fork();
-
-        if (new_pid == -1)
-        { // error en la creación del proceso hijo
-            color("Rojo");
-            printf("Error en la creación del proceso hijo\n");
-            color("Blanco");
-        }
-        else if (new_pid == 0)
-        {
-            /*color("Cyan");
-            printf("Nuevo heavy proccess creado \n-> Parent ID:%d\n", getppid());
-            color("Blanco");*/
-
-            while (1)
-            {
-                printf("PUNTERO 2 %s\n", queue[0]);
-                char *message = dequeue(sem_mutex, queue);
-                display();
-                sleep(2);
-                // display();
-                // printf("ID %d\n", getpid());
-                if (message != NULL)
-                {
-                    printf("Processing msg...\n");
-
+                    printf("Proceso hijo %d procesando mensaje...\n", i);
+                    // Procesar el mensaje
                     process_new_request(message, sem_tmpImg, sem_contImg);
+                } else {
+                    sem_post(sem_queue);
+                    // Esperar un poco antes de volver a leer el queue
+                    usleep(100000);
                 }
-
-                
             }
-
             exit(0);
         }
     }
-    return NULL;
+    
+    // código del proceso padre
+    while (1)
+    {
+        // espera a que haya un mensaje en la cola
+        sem_wait(&sem_mutex);
+        sem_wait(&sem_data);
+        char *message =  dequeue_pre(queue);
+        sem_post(&sem_mutex);
+
+        if (message != NULL)
+        {
+            printf("Enviando mensaje a hijo...\n");
+
+            // enviar el mensaje a un proceso hijo libre
+            int free_child = -1;
+            for (int i = 0; i < 6; i++)
+            {
+                if (waitpid(pid[i], NULL, WNOHANG) == pid[i])
+                {
+                    free_child = i;
+                    break;
+                }
+            }
+
+            if (free_child >= 0)
+            {
+                sem_wait(sem_pid);
+                printf("Enviando mensaje a hijo %d...\n", free_child);
+                sem_post(sem_pid);
+
+                sem_wait(&sem_mutex);
+                dequeue_pre(queue); // sacar el mensaje de la cola
+                sem_post(&sem_mutex);
+
+                // enviar el mensaje al proceso hijo libre
+                sem_post(&sem_data); // desbloquear al proceso hijo
+            }
+            else
+            {
+                printf("Todos los hijos están ocupados, esperando...\n");
+            }
+        }
+    }
+
 }
 
 int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg)
@@ -271,3 +338,34 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
 
     return 0;
 }
+
+
+char *dequeue_pre(queue_t *queue) {
+    // Si la cola está vacía, devolver NULL
+    if (queue->head == queue->tail) {
+        return NULL;
+    }
+    // Obtener el mensaje en la posición de la cabeza de la cola
+    char *message = queue->messages[queue->head];
+    // Actualizar la posición de la cabeza de la cola
+    queue->head = (queue->head + 1) % QUEUE_SIZE;
+    // Devolver el mensaje
+    return message;
+}
+
+void enqueue_pre(queue_t *queue, const char *message) {
+    if ((queue->tail + 1) % QUEUE_SIZE == queue->head) {
+        // La cola está llena
+        printf("La cola está llena, no se puede agregar el mensaje: %s\n", message);
+        return;
+    }
+
+    // Copiar el mensaje a la cola
+    strcpy(queue->messages[queue->tail], message);
+
+    // Actualizar la posición del tail
+    queue->tail = (queue->tail + 1) % QUEUE_SIZE;
+
+    printf("El mensaje %s fue agregado a la cola\n", message);
+}
+
