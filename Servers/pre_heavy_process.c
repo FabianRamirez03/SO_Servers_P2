@@ -26,6 +26,7 @@
 #include "../util/img_processing.h"
 #include "../util/queue.h"
 #include <sys/shm.h>
+#include <sys/resource.h>
 
 #define PORT 8084
 #define buffer_size 900000
@@ -42,6 +43,8 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
 
 int processes = 0;
 
+int requests_processed = 0;
+
 void display();
 void *processing(void *arg);
 
@@ -56,8 +59,10 @@ typedef struct {
 
 char *dequeue_pre(queue_t *queue) ;
 void enqueue_pre(queue_t *queue, const char *message);
+int save_data(double cpu_time_used, int total);
 queue_t *queue;
-
+char llave[MAX_BYTES];
+long double cpu_anterior = 0;
 
 int main(int argc, char **argv)
 {
@@ -198,6 +203,13 @@ int main(int argc, char **argv)
 }
 void *processing(void *arg)
 {
+    FILE *csv_file = fopen("GUI/data/FIFO_single.csv", "a");
+    if (csv_file == NULL)
+    {
+        printf("Error al abrir el archivo\n");
+        return NULL;
+    }
+
     // Crear la memoria compartida para el queue
     int fd = shm_open("/myqueue", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
     if (fd == -1) {
@@ -312,6 +324,10 @@ void *processing(void *arg)
 int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg)
 {
     printf("Incia el procesamiento\n");
+    clock_t start, end;
+	double cpu_time_used;
+
+	start = clock();
 
     json_error_t error; // Estructura para almacenar errores
 
@@ -338,6 +354,12 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
 
     // Guardar el string en un archivo de texto
     const char *path = "Servers/pre_heavy_db/";
+	if (strcmp(key, llave) != 0)
+	{
+		// llave = key;
+		strcpy(llave, key);
+	}
+
     sem_wait(&sem_tmpImg);
     base64_to_image(base64_string, key, path); // Modifico la imagen temporal
     sem_post(&sem_tmpImg);
@@ -345,6 +367,12 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
     sobel_filter(nombre, path, sem_contImg, key);
 
     json_decref(json_obj); // Liberar la memoria utilizada por el objeto JSON
+
+    end = clock();
+	cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+    sem_wait(&sem_data);
+	save_data(cpu_time_used, total);
+	sem_post(&sem_data);
 
     return 0;
 }
@@ -377,5 +405,59 @@ void enqueue_pre(queue_t *queue, const char *message) {
     queue->tail = (queue->tail + 1) % QUEUE_SIZE;
 
     printf("El mensaje %s fue agregado a la cola\n", message);
+}
+
+int save_data(double cpu_time_used, int total){
+	requests_processed ++;
+	FILE *csv_file = fopen("GUI/data/Pre_Heavy_single.csv", "a");
+	if (csv_file == NULL)
+    {
+        printf("Error al abrir el archivo\n");
+        return 1;
+    }
+	fprintf(csv_file, "%f,%s\n", cpu_time_used, llave);
+	fclose(csv_file);
+	if (requests_processed ==  total){
+		printf("Guarda datos finales\n");
+		FILE *csv_file = fopen("GUI/data/Pre_Heavy.csv", "a");
+		if (csv_file == NULL)
+		{
+		    printf("Error al abrir el archivo\n");
+		    return 1;
+		}
+
+		color("Cyan");
+        printf("Se han procesado todos los mensajes\n");
+
+		struct rusage usage;
+
+		// Obtener el uso de recursos del proceso actual
+		if (getrusage(RUSAGE_SELF, &usage) != 0)
+		{
+			printf("Error al obtener el uso de recursos\n");
+			return 1;
+		}
+
+		// Imprimir la cantidad de memoria utilizada en KB
+		printf("Memoria utilizada: %ld KB\n", usage.ru_maxrss);
+
+		// Imprimir el tiempo de CPU utilizado en segundos y guardarlo en una variable
+		long double tiempo_cpu = (long double)usage.ru_stime.tv_sec + ((long double)usage.ru_stime.tv_usec / 1000000.0) - cpu_anterior;
+		printf("Tiempo de CPU utilizado: %Lfsegundos\n", tiempo_cpu);
+		printf("Tiempo de CPU del sistema utilizado: %ld.%06ld segundos\n", usage.ru_stime.tv_sec, usage.ru_stime.tv_usec);
+		cpu_anterior = (long double)usage.ru_stime.tv_sec + ((long double)usage.ru_stime.tv_usec / 1000000.0);
+
+		char memory[20];
+
+		sprintf(memory, "%ld", usage.ru_maxrss);
+
+		fprintf(csv_file, "%s,%Lf,%d\n", memory, tiempo_cpu, total);
+		fclose(csv_file);
+		requests_processed = 0;
+		return 0;
+
+	}
+	return 0;
+
 }
 
