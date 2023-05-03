@@ -36,13 +36,14 @@ def update_execution_time_plot():
 	df_fifo = pd.read_csv('GUI/data/FIFO_single.csv')
 	df_heavy = pd.read_csv('GUI/data/Heavy_single.csv')
 	df_hilos = pd.read_csv('GUI/data/Threads_single.csv')
-	#df_preheavy = pd.read_csv('GUI/dummyData/PreHeavy.csv')
+	df_preheavy = pd.read_csv('GUI/data/Pre_Heavy_single.csv')
 
 
 	# Agrupar los datos por la variable 'Key'
 	fifo_grouped_data = df_fifo.groupby('Key')
 	threads_grouped_data = df_hilos.groupby('Key')
 	heavy_grouped_data = df_heavy.groupby('Key')
+	pre_heavy_grouped_data = df_preheavy.groupby('Key')
 
 	# Obtener la cantidad de solicitudes y el tiempo de ejecución total por cada valor de 'Key'
 	fifo_requests_count = fifo_grouped_data['Key'].count()
@@ -54,14 +55,17 @@ def update_execution_time_plot():
 	heavy_requests_count = heavy_grouped_data['Key'].count()
 	heavy_total_runtime = heavy_grouped_data['Time'].sum()
 
+	pre_heavy_requests_count = pre_heavy_grouped_data['Key'].count()
+	pre_heavy_total_runtime = pre_heavy_grouped_data['Time'].sum()
+
 	# Crear la figura y los subplots
 	fig, ax = plt.subplots()
 
 	# Agregar las series al gráfico
 	ax.scatter(fifo_requests_count, fifo_total_runtime, label='FIFO')
 	ax.scatter(heavy_requests_count, heavy_total_runtime, label='Heavy')
-	ax.scatter(threads_requests_count, threads_total_runtime, label='hilos')
-	#ax.scatter(df_preheavy['CantidadSolicitudes'], df_preheavy['tiempoEjecucion'], label='PreHeavy')
+	ax.scatter(threads_requests_count, threads_total_runtime, label='Hilos')
+	ax.scatter(pre_heavy_requests_count, pre_heavy_total_runtime, label='PreHeavy')
 
 	# Configurar el gráfico
 	ax.set_xlabel('Cantidad de Solicitudes')
@@ -86,12 +90,13 @@ def update_avg_execution_time_plot():
 	df_fifo = pd.read_csv('GUI/data/FIFO_single.csv')
 	df_heavy = pd.read_csv('GUI/data/Heavy_single.csv')
 	df_hilos = pd.read_csv('GUI/data/Threads_single.csv')
-	#df_preheavy = pd.read_csv('GUI/dummyData/PreHeavy.csv')
+	df_preheavy = pd.read_csv('GUI/data/Pre_Heavy_single.csv')
 
 	# Agrupar los datos por la variable 'Key'
 	fifo_grouped_data = df_fifo.groupby('Key')
 	threads_grouped_data = df_hilos.groupby('Key')
 	heavy_grouped_data = df_heavy.groupby('Key')
+	pre_heavy_grouped_data = df_preheavy.groupby('Key')
 
 	# Obtener la cantidad de solicitudes y el tiempo de ejecución total por cada valor de 'Key'
 	fifo_requests_count = fifo_grouped_data['Key'].count()
@@ -103,10 +108,14 @@ def update_avg_execution_time_plot():
 	heavy_requests_count = heavy_grouped_data['Key'].count()
 	heavy_total_runtime = heavy_grouped_data['Time'].sum()
 
+	pre_heavy_requests_count = pre_heavy_grouped_data['Key'].count()
+	pre_heavy_total_runtime = pre_heavy_grouped_data['Time'].sum()
+
 	# Calcular el promedio de tiempo de ejecución por cantidad de solicitudes
 	fifo_mean_runtime = fifo_total_runtime / fifo_requests_count
 	threads_mean_runtime = threads_total_runtime / threads_requests_count
 	heavy_mean_runtime = heavy_total_runtime / heavy_requests_count
+	pre_heavy_mean_runtime = pre_heavy_total_runtime/pre_heavy_requests_count
 
 	# Crear la figura y los subplots
 	fig, ax = plt.subplots()
@@ -114,8 +123,8 @@ def update_avg_execution_time_plot():
 	# Agregar las series al gráfico
 	ax.scatter(fifo_requests_count, fifo_mean_runtime, label='FIFO')
 	ax.scatter(heavy_requests_count, heavy_mean_runtime, label='Heavy')
-	ax.scatter(threads_requests_count, threads_mean_runtime, label='hilos')
-	#ax.scatter(df_preheavy_avg['CantidadSolicitudes'], df_preheavy_avg['tiempoEjecucion'], label='PreHeavy')
+	ax.scatter(threads_requests_count, threads_mean_runtime, label='Hilos')
+	ax.scatter(pre_heavy_requests_count, pre_heavy_mean_runtime, label='PreHeavy')
 
 	# Configurar el gráfico
 	ax.set_xlabel('Cantidad de Solicitudes')
@@ -140,7 +149,7 @@ def update_memory_plot():
 	df_fifo = pd.read_csv('GUI/data/FIFO.csv')
 	#df_heavy = pd.read_csv('GUI/dummyData/Heavy.csv')
 	df_hilos = pd.read_csv('GUI/data/Threads.csv')
-	#df_preheavy = pd.read_csv('GUI/dummyData/PreHeavy.csv')
+	df_preheavy = pd.read_csv('GUI/data/Pre_Heavy.csv')
 
 	# Crear la figura y los subplots
 	fig, ax = plt.subplots()
@@ -148,8 +157,8 @@ def update_memory_plot():
 	# Agregar las series al gráfico
 	ax.scatter(df_fifo['Total'], df_fifo['Memory'], label='FIFO')
 	#ax.scatter(df_heavy['CantidadSolicitudes'], df_heavy['memoriaUtilizada'], label='Heavy')
-	ax.scatter(df_hilos['Total'], df_hilos['Memory'], label='hilos')
-	#ax.scatter(df_preheavy['CantidadSolicitudes'], df_preheavy['memoriaUtilizada'], label='PreHeavy')
+	ax.scatter(df_hilos['Total'], df_hilos['Memory'], label='Hilos')
+	ax.scatter(df_preheavy['Total'], df_preheavy['Memory'], label='PreHeavy')
 
 	# Configurar el gráfico
 	ax.set_xlabel('Cantidad de Solicitudes')
@@ -174,7 +183,7 @@ def update_cpu_plot():
 	df_fifo = pd.read_csv('GUI/data/FIFO.csv')
 	#df_heavy = pd.read_csv('GUI/dummyData/Heavy.csv')
 	df_hilos = pd.read_csv('GUI/data/Threads.csv')
-	#df_preheavy = pd.read_csv('GUI/dummyData/PreHeavy.csv')
+	df_preheavy = pd.read_csv('GUI/data/Pre_Heavy.csv')
 
 	# Crear la figura y los subplots
 	fig, ax = plt.subplots()
@@ -182,8 +191,8 @@ def update_cpu_plot():
 	# Agregar las series al gráfico
 	ax.scatter(df_fifo['Total'], df_fifo['CPU'], label='FIFO')
 	#ax.scatter(df_heavy['CantidadSolicitudes'], df_heavy['memoriaUtilizada'], label='Heavy')
-	ax.scatter(df_hilos['Total'], df_hilos['CPU'], label='hilos')
-	#ax.scatter(df_preheavy['CantidadSolicitudes'], df_preheavy['memoriaUtilizada'], label='PreHeavy')
+	ax.scatter(df_hilos['Total'], df_hilos['CPU'], label='Hilos')
+	ax.scatter(df_preheavy['Total'], df_preheavy['CPU'], label='PreHeavy')
 
 	# Configurar el gráfico
 	ax.set_xlabel('Cantidad de Solicitudes')
