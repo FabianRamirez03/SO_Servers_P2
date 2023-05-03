@@ -54,4 +54,4 @@ run_visualizer:
 run_pre_heavy:
 	rm -rf ./Servers/pre_heavy_db/*
 	mkdir ./Servers/pre_heavy_db/tmp/
-	./out/pre_heavy -p 1
+	./out/pre_heavy -p 5	

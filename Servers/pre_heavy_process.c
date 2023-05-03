@@ -45,6 +45,8 @@ int processes = 0;
 
 int requests_processed = 0;
 
+int done = 1;
+
 void display();
 void *processing(void *arg);
 
@@ -404,7 +406,7 @@ void enqueue_pre(queue_t *queue, const char *message) {
     // Actualizar la posición del tail
     queue->tail = (queue->tail + 1) % QUEUE_SIZE;
 
-    printf("El mensaje %s fue agregado a la cola\n", message);
+    //printf("El mensaje %s fue agregado a la cola\n", message);
 }
 
 int save_data(double cpu_time_used, int total){
@@ -417,7 +419,8 @@ int save_data(double cpu_time_used, int total){
     }
 	fprintf(csv_file, "%f,%s\n", cpu_time_used, llave);
 	fclose(csv_file);
-	if (requests_processed ==  total){
+    printf("Requests processed: %d\n", requests_processed);
+	if (requests_processed ==  total || requests_processed * processes >= total * 0.8 && done == 1){
 		printf("Guarda datos finales\n");
 		FILE *csv_file = fopen("GUI/data/Pre_Heavy.csv", "a");
 		if (csv_file == NULL)
@@ -451,9 +454,15 @@ int save_data(double cpu_time_used, int total){
 
 		sprintf(memory, "%ld", usage.ru_maxrss);
 
-		fprintf(csv_file, "%s,%Lf,%d\n", memory, tiempo_cpu, total);
+		fprintf(csv_file, "%s,%Lf,%d\n", memory, tiempo_cpu, requests_processed);
 		fclose(csv_file);
-		requests_processed = 0;
+        if(requests_processed >= total){
+            requests_processed = 0;
+            done = 1;
+        }
+        else{
+            done = 0;
+        }
 		return 0;
 
 	}
