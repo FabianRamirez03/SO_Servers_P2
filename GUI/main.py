@@ -147,7 +147,7 @@ def update_avg_execution_time_plot():
 def update_memory_plot():
 	global memory_frame
 	df_fifo = pd.read_csv('GUI/data/FIFO.csv')
-	#df_heavy = pd.read_csv('GUI/dummyData/Heavy.csv')
+	df_heavy = pd.read_csv('GUI/data/Heavy.csv')
 	df_hilos = pd.read_csv('GUI/data/Threads.csv')
 	df_preheavy = pd.read_csv('GUI/data/Pre_Heavy.csv')
 
@@ -156,7 +156,7 @@ def update_memory_plot():
 
 	# Agregar las series al gráfico
 	ax.scatter(df_fifo['Total'], df_fifo['Memory'], label='FIFO')
-	#ax.scatter(df_heavy['CantidadSolicitudes'], df_heavy['memoriaUtilizada'], label='Heavy')
+	ax.scatter(df_heavy['Total'], df_heavy['Memory'], label='Heavy')
 	ax.scatter(df_hilos['Total'], df_hilos['Memory'], label='Hilos')
 	ax.scatter(df_preheavy['Total'], df_preheavy['Memory'], label='PreHeavy')
 
@@ -181,7 +181,7 @@ def update_memory_plot():
 def update_cpu_plot():
 	global custom_frame
 	df_fifo = pd.read_csv('GUI/data/FIFO.csv')
-	#df_heavy = pd.read_csv('GUI/dummyData/Heavy.csv')
+	df_heavy = pd.read_csv('GUI/data/Heavy.csv')
 	df_hilos = pd.read_csv('GUI/data/Threads.csv')
 	df_preheavy = pd.read_csv('GUI/data/Pre_Heavy.csv')
 
@@ -190,7 +190,7 @@ def update_cpu_plot():
 
 	# Agregar las series al gráfico
 	ax.scatter(df_fifo['Total'], df_fifo['CPU'], label='FIFO')
-	#ax.scatter(df_heavy['CantidadSolicitudes'], df_heavy['memoriaUtilizada'], label='Heavy')
+	ax.scatter(df_heavy['Total'], df_heavy['CPU'], label='Heavy')
 	ax.scatter(df_hilos['Total'], df_hilos['CPU'], label='Hilos')
 	ax.scatter(df_preheavy['Total'], df_preheavy['CPU'], label='PreHeavy')
 
