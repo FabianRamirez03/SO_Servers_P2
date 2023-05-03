@@ -19,6 +19,12 @@
 #include "../util/img_processing.h"
 #include "../util/queue.h"
 #include <sys/resource.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <semaphore.h>
 
 #define PORT 8083
 #define buffer_size 900000
@@ -42,10 +48,15 @@ sem_t sem_data;
 int num_children = 0;
 int zombie_children = 1;
 
+#define SHM_KEY 1234
 
+typedef struct {
+    int count;
+    sem_t mutex;
+} SharedData;
 
-int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg, sem_t sem_data);
-int save_data(double cpu_time_used, int total);
+int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg, sem_t sem_data, SharedData *sharedData);
+int save_data(double cpu_time_used, int total, SharedData *sharedData);
 
 void display();
 void *processing(void *arg);
@@ -178,51 +189,77 @@ int main(int argc, char **argv)
 void *processing(void *arg)
 {
     // Obtener el ID del proceso padre al inicio de la ejecución
+    sem_t sem_pid;
+    sem_init(&sem_pid, 0, 1);
+    pid_t PARENT_PID = 0;
     sem_wait(&sem_pid);
     PARENT_PID = getpid();
     sem_post(&sem_pid);
 
-    while (1)
-    {
+    // Crear y adjuntar el segmento de memoria compartida
+    int shm_id = shmget(SHM_KEY, sizeof(SharedData), IPC_CREAT | 0666);
+    if (shm_id == -1) {
+        perror("shmget");
+        exit(EXIT_FAILURE);
+    }
+    SharedData *shared_data = (SharedData *) shmat(shm_id, NULL, 0);
+    if (shared_data == (SharedData *)-1) {
+        perror("shmat");
+        exit(EXIT_FAILURE);
+    }
+    shared_data->count = 0;
+    sem_init(&shared_data->mutex, 1, 1);
+
+    while (1) {
 
         // Creating new child processes.
         pid_t pid;
         sem_wait(&sem_pid);
         pid_t current_pid = getpid();
         sem_post(&sem_pid);
-        if (current_pid == PARENT_PID)
-        {
+        if (current_pid == PARENT_PID) {
             //sleep(0.6);
-            sem_wait(&sem_pid);
-            char *message = dequeue(sem_mutex, queue);
-            sem_post(&sem_pid);
-            if (message != NULL)
-            {
+            sem_t sem_queue;
+            sem_init(&sem_queue, 0, 1);
+            char *message = dequeue(sem_queue, queue);
+            sem_destroy(&sem_queue);
+            if (message != NULL) {
                 printf("Processing msg...\n");
 
                 pid = fork(); // creación del proceso hijo
 
-                if (pid == -1)
-                { // error en la creación del proceso hijo
+                if (pid == -1) { // error en la creación del proceso hijo
                     color("Rojo");
                     printf("Error en la creación del proceso hijo\n");
                     color("Blanco");
                 }
-                if (pid == 0)
-                {
+                if (pid == 0) {
                     color("Cyan");
                     printf("Nuevo heavy proccess creado \n-> Parent ID:%d\n", getppid());
                     color("Blanco");
 
-                    process_new_request(message, sem_tmpImg, sem_contImg, sem_data);
+                    // Incrementar la variable entera compartida
+                    sem_wait(&shared_data->mutex);
+                    shared_data->count++;
+                    sem_post(&shared_data->mutex);
+
+                    process_new_request(message, sem_tmpImg, sem_contImg, sem_data, shared_data);
                     exit(0);
                 }
             }
         }
+            //printf("CONTADOOOOOOR %d\n", shared_data->count);
+
     }
+
+    // Eliminar el segmento de memoria compartida cuando ya no sea necesario
+    shmdt(shared_data);
+    shmctl(shm_id, IPC_RMID, NULL);
+
+    return NULL;
 }
 
-int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg, sem_t sem_data)
+int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg, sem_t sem_data, SharedData *shared_data)
 {
 	clock_t start, end;
 	double cpu_time_used;
@@ -287,13 +324,13 @@ int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_cont
 	cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
 
 	sem_wait(&sem_data);
-	save_data(cpu_time_used, total);
+	save_data(cpu_time_used, total, shared_data);
 	sem_post(&sem_data);
 	
     return 0;
 }
 
-int save_data(double cpu_time_used, int total){
+int save_data(double cpu_time_used, int total, SharedData *sharedData){
 	requests_processed ++;
 	FILE *csv_file = fopen("GUI/data/Heavy_single.csv", "a");
 	if (csv_file == NULL)
@@ -303,7 +340,7 @@ int save_data(double cpu_time_used, int total){
     }
 	fprintf(csv_file, "%f,%s\n", cpu_time_used, llave);
 	fclose(csv_file);
-	if (requests_processed ==  total){
+	if (sharedData->count ==  total || sharedData->count >= total * 0.8){
 		printf("Guarda datos finales\n");
 		FILE *csv_file = fopen("GUI/data/Heavy.csv", "a");
 		if (csv_file == NULL)
@@ -339,7 +376,10 @@ int save_data(double cpu_time_used, int total){
 
 		fprintf(csv_file, "%s,%Lf,%d\n", memory, tiempo_cpu, total);
 		fclose(csv_file);
-		requests_processed = 0;
+        if (sharedData->count ==  total){
+            sharedData->count = 0;
+        }
+		//requests_processed = 0;
 		return 0;
 
 	}
