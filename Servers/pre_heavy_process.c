@@ -27,7 +27,7 @@
 #include "../util/queue.h"
 #include <sys/shm.h>
 
-#define PORT 8081
+#define PORT 8084
 #define buffer_size 900000
 #define MAX_BYTES 1024
 
@@ -39,6 +39,8 @@ sem_t sem_pid, sem_data;                            // semaphore variable
 pid_t PARENT_PID;
 
 int process_new_request(char *message_received, sem_t sem_tmpImg, sem_t sem_contImg);
+
+int processes = 0;
 
 void display();
 void *processing(void *arg);
@@ -63,6 +65,14 @@ int main(int argc, char **argv)
     int shmid;
     //char(*queue)[100000];
 
+    //get -p from command line and save it ina a a variable
+    for (int i = 0; i < argc; i++) {
+        if (strcmp(argv[i], "-p") == 0) {
+            processes = atoi(argv[i + 1]);
+        }
+    }
+    
+    
 
     sem_init(&sem_pid, 0, 1); // Inicializa el semáforo en 1
 
@@ -223,7 +233,7 @@ void *processing(void *arg)
 
     // Crear los 6 procesos hijos
     pid_t pid[6];
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < processes; i++) {
         pid[i] = fork();
         if (pid[i] == -1) {
             perror("fork");

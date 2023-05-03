@@ -23,13 +23,16 @@ install_libs:
 	sudo apt-get install libjpeg-dev
 
 run_client_fifo:
-	./out/client -p 8081 -t 2 -c 5 -i ./images/arbol.png -ip 127.0.0.1 -lz
+	./out/client -p 8081 -t 10 -c 10 -i ./images/arbol.png -ip 127.0.0.1
 
 run_client_threads:
-	./out/client -p 8082 -t 20 -c 2 -i ./images/arbol.png -ip 127.0.0.1 -lz
+	./out/client -p 8082 -t 20 -c 2 -i ./images/arbol.png -ip 127.0.0.1 
 
 run_client_heavy:
-	./out/client -p 8083 -t 5 -c 5 -i ./images/beagle.jpg -ip 127.0.0.1 -lz
+	./out/client -p 8083 -t 5 -c 5 -i ./images/beagle.jpg -ip 127.0.0.1
+
+run_client_pre_heavy:
+	./out/client -p 8084 -t 10 -c 10 -i ./images/arbol.png -ip 127.0.0.1
 
 run_fifo:
 	rm -rf ./Servers/FIFO_db/*
@@ -48,8 +51,7 @@ run_threads:
 
 run_visualizer:
 	python3 GUI/main.py
-
 run_pre_heavy:
 	rm -rf ./Servers/pre_heavy_db/*
 	mkdir ./Servers/pre_heavy_db/tmp/
-	./out/pre_heavy
+	./out/pre_heavy -p 1
